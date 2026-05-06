@@ -24,10 +24,10 @@ def lista():
     cat = request.args.get("cat", "")
     sql = """
         SELECT p.*, c.nombre as categoria_nombre,
-               COALESCE(SUM(v.stock), 0) as stock_total
+               COALESCE(vs.stock_total, 0) as stock_total
         FROM productos p
         LEFT JOIN categorias c ON p.categoria_id = c.id
-        LEFT JOIN variantes v ON v.producto_id = p.id
+        LEFT JOIN (SELECT producto_id, SUM(stock) as stock_total FROM variantes GROUP BY producto_id) vs ON vs.producto_id = p.id
         WHERE p.activo = 1
     """
     params = []
@@ -37,7 +37,7 @@ def lista():
     if cat:
         sql += " AND p.categoria_id = %s"
         params.append(cat)
-    sql += " GROUP BY p.id ORDER BY p.nombre"
+    sql += " ORDER BY p.nombre"
     productos = db.execute(sql, params).fetchall()
     categorias = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
     db.close()

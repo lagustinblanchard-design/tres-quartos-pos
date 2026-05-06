@@ -112,14 +112,14 @@ def stock():
     productos = db.execute("""
         SELECT p.nombre, p.sku, c.nombre as categoria,
                p.precio_costo, p.precio_venta,
-               COALESCE(SUM(va.stock), 0) as stock_total,
-               COALESCE(SUM(va.stock), 0) * p.precio_costo as valor_costo,
-               COALESCE(SUM(va.stock), 0) * p.precio_venta as valor_venta
+               COALESCE(vs.stock_total, 0) as stock_total,
+               COALESCE(vs.stock_total, 0) * p.precio_costo as valor_costo,
+               COALESCE(vs.stock_total, 0) * p.precio_venta as valor_venta
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
-        LEFT JOIN variantes va ON va.producto_id = p.id
+        LEFT JOIN (SELECT producto_id, SUM(stock) as stock_total FROM variantes GROUP BY producto_id) vs ON vs.producto_id = p.id
         WHERE p.activo = 1
-        GROUP BY p.id ORDER BY p.nombre
+        ORDER BY p.nombre
     """).fetchall()
 
     totales = {
@@ -170,13 +170,13 @@ def exportar_stock():
     rows = db.execute("""
         SELECT p.nombre, p.sku, c.nombre as categoria,
                p.precio_costo, p.precio_venta,
-               COALESCE(SUM(va.stock),0) as stock_total,
-               COALESCE(SUM(va.stock),0)*p.precio_costo as valor_costo,
-               COALESCE(SUM(va.stock),0)*p.precio_venta as valor_venta
+               COALESCE(vs.stock_total,0) as stock_total,
+               COALESCE(vs.stock_total,0)*p.precio_costo as valor_costo,
+               COALESCE(vs.stock_total,0)*p.precio_venta as valor_venta
         FROM productos p
         LEFT JOIN categorias c ON c.id=p.categoria_id
-        LEFT JOIN variantes va ON va.producto_id=p.id
-        WHERE p.activo=1 GROUP BY p.id ORDER BY p.nombre
+        LEFT JOIN (SELECT producto_id, SUM(stock) as stock_total FROM variantes GROUP BY producto_id) vs ON vs.producto_id=p.id
+        WHERE p.activo=1 ORDER BY p.nombre
     """).fetchall()
     db.close()
     df = pd.DataFrame([dict(r) for r in rows])
