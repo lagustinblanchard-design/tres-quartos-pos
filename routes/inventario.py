@@ -181,37 +181,43 @@ def ajuste():
 def importar():
     preview = None
     error = None
+    cols = []
+    datos_b64 = None
     if request.method == "POST" and "archivo" in request.files:
         archivo = request.files["archivo"]
         if archivo.filename:
-            import pandas as pd, uuid
+            import pandas as pd, json, base64
             try:
                 df = pd.read_excel(io.BytesIO(archivo.read()))
                 df.columns = [str(c).strip() for c in df.columns]
                 preview = df.head(10).to_dict("records")
                 cols = list(df.columns)
-                session["excel_cols"] = cols
-                key = str(uuid.uuid4())
-                _import_cache[key] = df.to_dict("records")
-                session["import_key"] = key
+                rows = df.to_dict("records")
+                # Serializar filas a base64 para incrustar en el form (sin estado servidor)
+                datos_b64 = base64.b64encode(
+                    json.dumps(rows, default=str).encode("utf-8")
+                ).decode("ascii")
             except Exception as e:
                 error = str(e)
 
-    cols = session.get("excel_cols", [])
     return render_template("inventario/importar.html", preview=preview, cols=cols,
-                           error=error, active="importar")
+                           datos_b64=datos_b64, error=error, active="importar")
 
 
 @inventario_bp.route("/importar/confirmar", methods=["POST"])
 @login_required
 def importar_confirmar():
-    key = session.get("import_key")
-    if not key or key not in _import_cache:
+    import json, base64
+    datos_b64 = request.form.get("datos_b64", "")
+    if not datos_b64:
         flash("No hay archivo para importar.", "danger")
         return redirect(url_for("inventario.importar"))
 
-    rows = _import_cache.pop(key)
-    session.pop("import_key", None)
+    try:
+        rows = json.loads(base64.b64decode(datos_b64).decode("utf-8"))
+    except Exception:
+        flash("Error al leer los datos del archivo.", "danger")
+        return redirect(url_for("inventario.importar"))
 
     col_nombre = request.form.get("col_nombre")
     col_sku = request.form.get("col_sku", "")

@@ -22,6 +22,7 @@
     <div style="margin-top:24px;">
       <div class="card-title">2. Mapear columnas</div>
       <form method="POST" action="{{ url_for('inventario.importar_confirmar') }}">
+        <input type="hidden" name="datos_b64" value="{{ datos_b64 }}">
         {% set campos = [
           ('col_nombre', 'Nombre del producto *'),
           ('col_sku', 'SKU / Código'),
