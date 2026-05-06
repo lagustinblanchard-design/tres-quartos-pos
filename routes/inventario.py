@@ -230,29 +230,26 @@ def importar_confirmar():
 
     db = get_db()
 
-    # Pre-cargar categorías y productos existentes (evita N queries)
+    # Pre-cargar existentes en memoria
     cats_existentes = {r["nombre"]: r["id"] for r in db.execute("SELECT id, nombre FROM categorias").fetchall()}
     prods_existentes = {r["nombre"]: r["id"] for r in db.execute("SELECT id, nombre FROM productos").fetchall()}
 
-    importados = 0
+    # Primer paso: parsear todas las filas y resolver categorías (pocas, no hace falta batch)
+    filas_limpias = []
     for row in rows:
         nombre = str(row.get(col_nombre, "")).strip() if col_nombre else ""
         if not nombre or nombre == "nan":
             continue
         sku = str(row.get(col_sku, "")).strip() if col_sku else None
-        if sku in ("nan", ""):
-            sku = None
+        if sku in ("nan", ""): sku = None
         cat_nombre = str(row.get(col_categoria, "")).strip() if col_categoria else None
         cat_id = None
         if cat_nombre and cat_nombre != "nan":
             if cat_nombre not in cats_existentes:
-                cat_id = db.execute(
-                    "INSERT INTO categorias (nombre) VALUES (%s) RETURNING id", (cat_nombre,)
-                ).lastrowid
+                cat_id = db.execute("INSERT INTO categorias (nombre) VALUES (%s) RETURNING id", (cat_nombre,)).lastrowid
                 cats_existentes[cat_nombre] = cat_id
             else:
                 cat_id = cats_existentes[cat_nombre]
-
         costo = float(row.get(col_precio_costo, 0) or 0) if col_precio_costo else 0
         venta = float(row.get(col_precio_venta, 0) or 0) if col_precio_venta else 0
         talla = str(row.get(col_talla, "")).strip() if col_talla else ""
@@ -260,22 +257,40 @@ def importar_confirmar():
         color = str(row.get(col_color, "")).strip() if col_color else ""
         if color == "nan": color = ""
         stock = int(float(row.get(col_stock, 0) or 0)) if col_stock else 0
+        filas_limpias.append((nombre, sku, cat_id, costo, venta, talla, color, stock))
 
-        if nombre not in prods_existentes:
-            pid = db.execute(
-                "INSERT INTO productos (sku, nombre, categoria_id, precio_costo, precio_venta) VALUES (%s,%s,%s,%s,%s) RETURNING id",
-                (sku, nombre, cat_id, costo, venta)
-            ).lastrowid
-            prods_existentes[nombre] = pid
-        else:
-            pid = prods_existentes[nombre]
+    # Segundo paso: insertar productos nuevos en batch
+    nuevos_prods = [(n, s, c, co, v) for n, s, c, co, v, *_ in filas_limpias if n not in prods_existentes]
+    # Deduplicar por nombre
+    vistos = set()
+    nuevos_prods_uniq = []
+    for row in nuevos_prods:
+        if row[0] not in vistos:
+            vistos.add(row[0])
+            nuevos_prods_uniq.append(row)
 
-        if talla or color or stock:
-            db.execute(
-                "INSERT INTO variantes (producto_id, talla, color, stock) VALUES (%s,%s,%s,%s)",
-                (pid, talla, color, stock)
-            )
-        importados += 1
+    if nuevos_prods_uniq:
+        placeholders = ",".join(["(%s,%s,%s,%s,%s)" for _ in nuevos_prods_uniq])
+        params = [v for row in nuevos_prods_uniq for v in row]
+        result = db.execute(
+            f"INSERT INTO productos (nombre, sku, categoria_id, precio_costo, precio_venta) VALUES {placeholders} RETURNING id, nombre",
+            params
+        )
+        for r in result.fetchall():
+            prods_existentes[r["nombre"]] = r["id"]
+
+    # Tercer paso: insertar variantes en batch
+    variantes = [
+        (prods_existentes[n], t, col, st)
+        for n, s, c, co, v, t, col, st in filas_limpias
+        if (t or col or st) and n in prods_existentes
+    ]
+    if variantes:
+        placeholders = ",".join(["(%s,%s,%s,%s)" for _ in variantes])
+        params = [v for row in variantes for v in row]
+        db.execute(f"INSERT INTO variantes (producto_id, talla, color, stock) VALUES {placeholders}", params)
+
+    importados = len(filas_limpias)
 
     db.commit()
     db.close()
