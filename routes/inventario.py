@@ -5,6 +5,9 @@ import io
 
 inventario_bp = Blueprint("inventario", __name__, url_prefix="/inventario")
 
+# Cache en memoria para datos del Excel entre paso 1 y paso 2
+_import_cache = {}
+
 
 def login_required(f):
     from functools import wraps
@@ -181,16 +184,16 @@ def importar():
     if request.method == "POST" and "archivo" in request.files:
         archivo = request.files["archivo"]
         if archivo.filename:
-            import pandas as pd
+            import pandas as pd, uuid
             try:
                 df = pd.read_excel(io.BytesIO(archivo.read()))
                 df.columns = [str(c).strip() for c in df.columns]
                 preview = df.head(10).to_dict("records")
-                session["excel_cols"] = list(df.columns)
-                import tempfile, os
-                tmp = os.path.join(tempfile.gettempdir(), "_tq_import.xlsx")
-                archivo.seek(0)
-                archivo.save(tmp)
+                cols = list(df.columns)
+                session["excel_cols"] = cols
+                key = str(uuid.uuid4())
+                _import_cache[key] = df.to_dict("records")
+                session["import_key"] = key
             except Exception as e:
                 error = str(e)
 
@@ -202,11 +205,13 @@ def importar():
 @inventario_bp.route("/importar/confirmar", methods=["POST"])
 @login_required
 def importar_confirmar():
-    import pandas as pd, os, tempfile
-    tmp = os.path.join(tempfile.gettempdir(), "_tq_import.xlsx")
-    if not os.path.exists(tmp):
+    key = session.get("import_key")
+    if not key or key not in _import_cache:
         flash("No hay archivo para importar.", "danger")
         return redirect(url_for("inventario.importar"))
+
+    rows = _import_cache.pop(key)
+    session.pop("import_key", None)
 
     col_nombre = request.form.get("col_nombre")
     col_sku = request.form.get("col_sku", "")
@@ -217,9 +222,6 @@ def importar_confirmar():
     col_color = request.form.get("col_color", "")
     col_stock = request.form.get("col_stock", "")
 
-    df = pd.read_excel(tmp)
-    df.columns = [str(c).strip() for c in df.columns]
-
     db = get_db()
 
     # Pre-cargar categorías y productos existentes (evita N queries)
@@ -227,7 +229,7 @@ def importar_confirmar():
     prods_existentes = {r["nombre"]: r["id"] for r in db.execute("SELECT id, nombre FROM productos").fetchall()}
 
     importados = 0
-    for _, row in df.iterrows():
+    for row in rows:
         nombre = str(row.get(col_nombre, "")).strip() if col_nombre else ""
         if not nombre or nombre == "nan":
             continue
@@ -271,7 +273,6 @@ def importar_confirmar():
 
     db.commit()
     db.close()
-    os.remove(tmp)
     flash(f"Se importaron {importados} productos.", "success")
     return redirect(url_for("inventario.lista"))
 
