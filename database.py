@@ -17,6 +17,7 @@ class DbCursor:
     def _adapt(self, sql):
         if not self._is_pg:
             sql = sql.replace("%s", "?")
+            sql = re.sub(r'\bILIKE\b', 'LIKE', sql, flags=re.IGNORECASE)
             sql = re.sub(r'\s+RETURNING\s+id\s*$', '', sql, flags=re.IGNORECASE).strip()
         return sql
 

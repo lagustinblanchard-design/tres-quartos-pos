@@ -39,7 +39,7 @@ def api_productos():
     """
     params = []
     if q:
-        sql += " AND (p.nombre LIKE %s OR p.sku LIKE %s)"
+        sql += " AND (p.nombre ILIKE %s OR p.sku ILIKE %s)"
         params += [f"%{q}%", f"%{q}%"]
     if cat:
         sql += " AND p.categoria_id=%s"

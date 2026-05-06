@@ -32,7 +32,7 @@ def lista():
     """
     params = []
     if q:
-        sql += " AND (p.nombre LIKE %s OR p.sku LIKE %s)"
+        sql += " AND (p.nombre ILIKE %s OR p.sku ILIKE %s)"
         params += [f"%{q}%", f"%{q}%"]
     if cat:
         sql += " AND p.categoria_id = %s"
@@ -188,7 +188,7 @@ def importar():
                 preview = df.head(10).to_dict("records")
                 session["excel_cols"] = list(df.columns)
                 import tempfile, os
-                tmp = os.path.join(os.path.dirname(__file__), "..", "data", "_import_tmp.xlsx")
+                tmp = os.path.join(tempfile.gettempdir(), "_tq_import.xlsx")
                 archivo.seek(0)
                 archivo.save(tmp)
             except Exception as e:
@@ -202,8 +202,8 @@ def importar():
 @inventario_bp.route("/importar/confirmar", methods=["POST"])
 @login_required
 def importar_confirmar():
-    import pandas as pd, os
-    tmp = os.path.join(os.path.dirname(__file__), "..", "data", "_import_tmp.xlsx")
+    import pandas as pd, os, tempfile
+    tmp = os.path.join(tempfile.gettempdir(), "_tq_import.xlsx")
     if not os.path.exists(tmp):
         flash("No hay archivo para importar.", "danger")
         return redirect(url_for("inventario.importar"))
