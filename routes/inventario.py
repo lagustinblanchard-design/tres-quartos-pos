@@ -221,24 +221,29 @@ def importar_confirmar():
     df.columns = [str(c).strip() for c in df.columns]
 
     db = get_db()
+
+    # Pre-cargar categorías y productos existentes (evita N queries)
+    cats_existentes = {r["nombre"]: r["id"] for r in db.execute("SELECT id, nombre FROM categorias").fetchall()}
+    prods_existentes = {r["nombre"]: r["id"] for r in db.execute("SELECT id, nombre FROM productos").fetchall()}
+
     importados = 0
     for _, row in df.iterrows():
         nombre = str(row.get(col_nombre, "")).strip() if col_nombre else ""
         if not nombre or nombre == "nan":
             continue
         sku = str(row.get(col_sku, "")).strip() if col_sku else None
-        if sku == "nan" or sku == "":
+        if sku in ("nan", ""):
             sku = None
         cat_nombre = str(row.get(col_categoria, "")).strip() if col_categoria else None
         cat_id = None
         if cat_nombre and cat_nombre != "nan":
-            cat = db.execute("SELECT id FROM categorias WHERE nombre=%s", (cat_nombre,)).fetchone()
-            if not cat:
+            if cat_nombre not in cats_existentes:
                 cat_id = db.execute(
                     "INSERT INTO categorias (nombre) VALUES (%s) RETURNING id", (cat_nombre,)
                 ).lastrowid
+                cats_existentes[cat_nombre] = cat_id
             else:
-                cat_id = cat["id"]
+                cat_id = cats_existentes[cat_nombre]
 
         costo = float(row.get(col_precio_costo, 0) or 0) if col_precio_costo else 0
         venta = float(row.get(col_precio_venta, 0) or 0) if col_precio_venta else 0
@@ -248,14 +253,14 @@ def importar_confirmar():
         if color == "nan": color = ""
         stock = int(float(row.get(col_stock, 0) or 0)) if col_stock else 0
 
-        p = db.execute("SELECT id FROM productos WHERE nombre=%s", (nombre,)).fetchone()
-        if not p:
+        if nombre not in prods_existentes:
             pid = db.execute(
                 "INSERT INTO productos (sku, nombre, categoria_id, precio_costo, precio_venta) VALUES (%s,%s,%s,%s,%s) RETURNING id",
                 (sku, nombre, cat_id, costo, venta)
             ).lastrowid
+            prods_existentes[nombre] = pid
         else:
-            pid = p["id"]
+            pid = prods_existentes[nombre]
 
         if talla or color or stock:
             db.execute(
