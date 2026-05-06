@@ -43,18 +43,18 @@ class DbConnection:
     def __init__(self):
         self._is_pg = bool(DATABASE_URL)
         if self._is_pg:
-            import psycopg2
-            import psycopg2.extras
+            import psycopg
+            from psycopg.rows import dict_row
             import urllib.parse
             p = urllib.parse.urlparse(DATABASE_URL)
-            self._conn = psycopg2.connect(
+            self._conn = psycopg.connect(
                 host=p.hostname,
                 port=p.port or 5432,
                 user=p.username,
                 password=p.password,
                 dbname=(p.path or '/postgres').lstrip('/') or 'postgres',
                 sslmode='require',
-                cursor_factory=psycopg2.extras.RealDictCursor,
+                row_factory=dict_row,
             )
         else:
             self._conn = sqlite3.connect(DB_PATH)
