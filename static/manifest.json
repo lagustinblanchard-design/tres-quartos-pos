@@ -1,0 +1,17 @@
+{
+  "name": "Tres Quartos POS",
+  "short_name": "TQ",
+  "description": "Sistema de punto de venta Tres Quartos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2d2d2d",
+  "theme_color": "#f5b800",
+  "icons": [
+    {
+      "src": "/static/img/logo_original.png.jpeg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
