@@ -20,6 +20,9 @@ app.register_blueprint(caja_bp)
 app.register_blueprint(compras_bp)
 app.register_blueprint(reportes_bp)
 
+with app.app_context():
+    init_db()
+
 
 @app.route("/")
 def index():
