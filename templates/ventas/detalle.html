@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Venta #{{ venta.id }}{% endblock %}
+{% block page_title %}Venta #{{ venta.id }}{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+  <div class="card">
+    <div class="card-title">Ítems vendidos</div>
+    <table>
+      <thead>
+        <tr><th>Producto</th><th>Var.</th><th>Cant.</th><th>Precio</th><th>Desc.</th><th class="text-right">Subtotal</th></tr>
+      </thead>
+      <tbody>
+        {% for i in items %}
+        <tr>
+          <td class="fw-bold">{{ i.nombre }}</td>
+          <td class="text-muted">{{ i.talla or '' }}{% if i.talla and i.color %} / {% endif %}{{ i.color or '' }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>{{ i.precio_unitario | pesos }}</td>
+          <td>{{ i.descuento }}%</td>
+          <td class="text-right text-yellow fw-bold">{{ i.subtotal | pesos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Resumen</div>
+    <div class="total-row"><span class="text-muted">Vendedor</span><span>{{ venta.vendedor_nombre }}</span></div>
+    <div class="total-row"><span class="text-muted">Fecha</span><span>{{ venta.fecha | fecha_display }}</span></div>
+    <div class="total-row"><span class="text-muted">Método de pago</span><span class="badge badge-info">{{ venta.metodo_pago }}</span></div>
+    <div class="total-row"><span class="text-muted">Subtotal</span><span>{{ venta.subtotal | pesos }}</span></div>
+    <div class="total-row"><span class="text-muted">Desc. global</span><span>{{ venta.descuento }}%</span></div>
+    <div class="total-row fw-bold fs-large" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <span>TOTAL</span><span class="text-yellow">{{ venta.total | pesos }}</span>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button onclick="window.print()" class="btn btn-primary btn-block">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<a href="{{ url_for('ventas.historial') }}" class="btn btn-secondary" style="margin-top:8px;">← Volver</a>
+{% endblock %}

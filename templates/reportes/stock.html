@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Stock{% endblock %}
+{% block page_title %}Valorización de Stock{% endblock %}
+
+{% block content %}
+<div class="flex-between" style="margin-bottom:20px;">
+  <div class="kpi-grid" style="margin:0;flex:1;">
+    <div class="kpi-card">
+      <div class="kpi-label">Unidades totales</div>
+      <div class="kpi-value">{{ totales.stock_total }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Valor al costo</div>
+      <div class="kpi-value">{{ totales.valor_costo | pesos }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Valor a precio venta</div>
+      <div class="kpi-value">{{ totales.valor_venta | pesos }}</div>
+    </div>
+  </div>
+  <a href="{{ url_for('reportes.exportar_stock') }}" class="btn btn-secondary" style="margin-left:16px;align-self:center;">⬇ Exportar Excel</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th class="text-right">Stock</th>
+          <th class="text-right">Costo unit.</th>
+          <th class="text-right">Venta unit.</th>
+          <th class="text-right">Margen</th>
+          <th class="text-right">Valor costo</th>
+          <th class="text-right">Valor venta</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        {% set margen = ((p.precio_venta - p.precio_costo) / p.precio_venta * 100) if p.precio_venta > 0 else 0 %}
+        <tr>
+          <td class="text-muted">{{ p.sku or '—' }}</td>
+          <td class="fw-bold">{{ p.nombre }}</td>
+          <td>{{ p.categoria or '—' }}</td>
+          <td class="text-right">
+            {% if p.stock_total == 0 %}
+              <span class="badge badge-danger">0</span>
+            {% elif p.stock_total < 3 %}
+              <span class="badge badge-warning">{{ p.stock_total }}</span>
+            {% else %}
+              {{ p.stock_total }}
+            {% endif %}
+          </td>
+          <td class="text-right">{{ p.precio_costo | pesos }}</td>
+          <td class="text-right text-yellow">{{ p.precio_venta | pesos }}</td>
+          <td class="text-right">{{ "%.0f"|format(margen) }}%</td>
+          <td class="text-right">{{ p.valor_costo | pesos }}</td>
+          <td class="text-right fw-bold text-yellow">{{ p.valor_venta | pesos }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-muted" style="text-align:center;padding:30px;">Sin productos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

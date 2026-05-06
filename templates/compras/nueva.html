@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Nueva Compra{% endblock %}
+{% block page_title %}Nueva Compra{% endblock %}
+
+{% block content %}
+<form method="POST">
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
+    <div class="card">
+      <div class="card-title">Ítems de la compra</div>
+
+      <div style="margin-bottom:12px;">
+        <input type="text" id="buscar-variante" class="form-control" placeholder="Buscar producto para agregar...">
+      </div>
+
+      <div id="items-container">
+        <div style="display:grid;grid-template-columns:1fr 80px 120px 28px;gap:8px;margin-bottom:8px;font-size:11px;color:var(--text-muted);">
+          <span>Producto / Variante</span><span>Cantidad</span><span>Precio costo $</span><span></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addItemManual()">+ Agregar ítem manual</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Datos de la compra</div>
+      <div class="form-group">
+        <label class="form-label">Proveedor</label>
+        <select name="proveedor_id" class="form-control">
+          <option value="">Sin proveedor</option>
+          {% for p in proveedores %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <textarea name="notas" class="form-control" rows="3" placeholder="Observaciones opcionales..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Registrar compra</button>
+      <a href="{{ url_for('compras.lista') }}" class="btn btn-secondary btn-block" style="margin-top:8px;">Cancelar</a>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const variantes = {{ variantes | tojson }};
+
+document.getElementById('buscar-variante').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (!q) return;
+  const match = variantes.find(v =>
+    (v.producto_nombre + ' ' + v.talla + ' ' + v.color).toLowerCase().includes(q)
+  );
+  if (match) {
+    addItem(match);
+    this.value = '';
+  }
+});
+
+function addItem(v) {
+  const label = `${v.producto_nombre}${v.talla ? ' - ' + v.talla : ''}${v.color ? ' / ' + v.color : ''}`;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 80px 120px 28px;gap:8px;margin-bottom:8px;align-items:center;';
+  row.innerHTML = `
+    <div style="font-size:13px;">${label}<input type="hidden" name="variante_id[]" value="${v.id}"></div>
+    <input type="number" name="cantidad[]" class="form-control" min="1" value="1" required>
+    <input type="number" name="precio_costo[]" class="form-control" min="0" step="1" value="${v.precio_costo || 0}" required>
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  document.getElementById('items-container').appendChild(row);
+}
+
+function addItemManual() {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 80px 120px 28px;gap:8px;margin-bottom:8px;align-items:center;';
+  row.innerHTML = `
+    <select name="variante_id[]" class="form-control">
+      ${variantes.map(v => `<option value="${v.id}">${v.producto_nombre}${v.talla?' - '+v.talla:''}${v.color?' / '+v.color:''} (stock: ${v.stock})</option>`).join('')}
+    </select>
+    <input type="number" name="cantidad[]" class="form-control" min="1" value="1" required>
+    <input type="number" name="precio_costo[]" class="form-control" min="0" step="1" value="0" required>
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+  `;
+  document.getElementById('items-container').appendChild(row);
+}
+</script>
+{% endblock %}

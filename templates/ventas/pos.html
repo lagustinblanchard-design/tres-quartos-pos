@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Punto de Venta — TRES QUARTOS{% endblock %}
+{% block page_title %}Punto de Venta{% endblock %}
+
+{% block content %}
+<div class="pos-layout">
+
+  <!-- PANEL IZQUIERDO: productos -->
+  <div class="pos-productos">
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <div class="search-bar" style="flex:1;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" class="form-control" placeholder="Buscar producto por nombre..." autocomplete="off">
+      </div>
+      <select id="cat-filter" class="form-control" style="width:180px;">
+        <option value="">Todas las categorías</option>
+        {% for c in categorias %}
+          <option value="{{ c.id }}">{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="productos-grid" class="productos-grid">
+      <div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:40px;">
+        Escribí algo para buscar productos...
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO: carrito -->
+  <div class="pos-carrito" id="pos-carrito">
+    <div class="carrito-header">
+      🛒 Carrito
+      <span id="carrito-count" style="color:var(--text-muted);font-weight:400;margin-left:6px;"></span>
+    </div>
+
+    <div class="carrito-items" id="carrito-items">
+      <div id="carrito-vacio" style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">
+        Sin productos en el carrito
+      </div>
+    </div>
+
+    <div class="carrito-footer">
+      <div class="total-row">
+        <span class="text-muted">Subtotal</span>
+        <span id="subtotal-display">$0</span>
+      </div>
+      <div class="total-row">
+        <span class="text-muted">Descuento global</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="descuento-global" class="form-control" style="width:60px;padding:4px 8px;"
+                 min="0" max="100" value="0" placeholder="0">
+          <span class="text-muted">%</span>
+        </div>
+      </div>
+      <div class="total-row" style="margin-top:8px;">
+        <span class="fw-bold fs-large">TOTAL</span>
+        <span class="total-final" id="total-display">$0</span>
+      </div>
+
+      <div class="metodos-pago">
+        <button class="metodo-btn active" onclick="setMetodo('efectivo', this)">💵 Efectivo</button>
+        <button class="metodo-btn" onclick="setMetodo('debito', this)">💳 Débito</button>
+        <button class="metodo-btn" onclick="setMetodo('credito', this)">💳 Crédito</button>
+        <button class="metodo-btn" onclick="setMetodo('transferencia', this)">📲 Transfer.</button>
+      </div>
+
+      <div id="vuelto-row" style="margin-bottom:12px;">
+        <div class="form-group mb-0">
+          <label class="form-label">Efectivo recibido</label>
+          <input type="number" id="efectivo-recibido" class="form-control" min="0" step="1" placeholder="0"
+                 oninput="calcVuelto()">
+        </div>
+        <div class="total-row mt-8">
+          <span class="text-muted">Vuelto</span>
+          <span id="vuelto-display" class="fw-bold text-success">$0</span>
+        </div>
+      </div>
+
+      <button id="btn-cobrar" class="btn btn-primary btn-block btn-lg" onclick="cobrar()" disabled>
+        Cobrar
+      </button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" onclick="limpiarCarrito()">
+        Limpiar carrito
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Botón flotante carrito (mobile) -->
+<button class="carrito-fab" id="carrito-fab" onclick="toggleCarritoMobile()">
+  🛒 Ver carrito (<span id="fab-count">0</span>)
+</button>
+
+<!-- MODAL variante -->
+<div class="modal-overlay" id="modal-variante">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-prod-nombre">Seleccionar variante</div>
+    <div id="modal-variantes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:16px;"></div>
+    <button class="btn btn-secondary btn-block" onclick="cerrarModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL ticket -->
+<div class="modal-overlay" id="modal-ticket">
+  <div class="modal-box">
+    <div class="modal-title">✅ Venta registrada</div>
+    <div id="ticket-content" class="ticket" style="font-family:monospace;font-size:12px;background:#fff;color:#000;padding:16px;border-radius:6px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn btn-secondary" onclick="cerrarTicket()">Nueva venta</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ventas.js') }}"></script>
+<script>
+  function toggleCarritoMobile() {
+    document.getElementById('pos-carrito').classList.toggle('open');
+  }
+
+  // Actualizar FAB count cuando cambia el carrito
+  var _origActualizarUI = typeof actualizarUI !== 'undefined' ? actualizarUI : null;
+  document.addEventListener('carrito-updated', function(e) {
+    var n = e.detail || 0;
+    document.getElementById('fab-count').textContent = n;
+  });
+</script>
+{% endblock %}

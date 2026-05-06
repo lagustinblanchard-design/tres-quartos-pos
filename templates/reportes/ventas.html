@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Reporte de Ventas{% endblock %}
+{% block page_title %}Reporte de Ventas{% endblock %}
+
+{% block content %}
+<form method="GET" class="card" style="padding:16px;margin-bottom:20px;">
+  <div class="form-row">
+    <div class="form-group mb-0">
+      <label class="form-label">Desde</label>
+      <input type="date" name="desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="form-group mb-0" style="align-self:flex-end;">
+      <button type="submit" class="btn btn-primary">Aplicar</button>
+      <a href="{{ url_for('reportes.exportar_ventas', desde=fecha_desde, hasta=fecha_hasta) }}" class="btn btn-secondary">⬇ Exportar Excel</a>
+    </div>
+  </div>
+</form>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total período</div>
+    <div class="kpi-value">{{ totales.total | pesos }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Transacciones</div>
+    <div class="kpi-value">{{ totales.cantidad }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Ticket promedio</div>
+    <div class="kpi-value">{{ totales.promedio | pesos }}</div>
+  </div>
+  {% for m in por_metodo %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ m.metodo_pago | capitalize }}</div>
+    <div class="kpi-value">{{ m.total | pesos }}</div>
+    <div class="kpi-sub">{{ m.cantidad }} ventas</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+  <div class="card">
+    <div class="card-title">Detalle de ventas</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Fecha</th><th>Vendedor</th><th>Método</th><th>Desc.</th><th class="text-right">Total</th></tr>
+        </thead>
+        <tbody>
+          {% for v in ventas %}
+          <tr>
+            <td class="text-muted">#{{ v.id }}</td>
+            <td>{{ v.fecha | fecha_display }}</td>
+            <td>{{ v.vendedor_nombre }}</td>
+            <td><span class="badge badge-info">{{ v.metodo_pago }}</span></td>
+            <td>{{ v.descuento }}%</td>
+            <td class="text-right fw-bold text-yellow">{{ v.total | pesos }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px;">Sin ventas en el período</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Top 10 productos</div>
+    {% for p in top_productos %}
+    <div class="total-row" style="padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">{{ p.nombre }}</span>
+      <span class="text-yellow fw-bold">{{ p.total_vendido }} u.</span>
+    </div>
+    {% else %}
+    <div class="text-muted" style="text-align:center;padding:20px;">Sin datos</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

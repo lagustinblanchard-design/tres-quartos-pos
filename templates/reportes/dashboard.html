@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard — Hoy{% endblock %}
+
+{% block content %}
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Ventas hoy</div>
+    <div class="kpi-value">{{ ventas_hoy.t | pesos }}</div>
+    <div class="kpi-sub">{{ ventas_hoy.c }} transacciones</div>
+  </div>
+  {% for m in metodos %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ m.metodo_pago | capitalize }}</div>
+    <div class="kpi-value">{{ m.total | pesos }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+  <div class="card">
+    <div class="card-title">Top productos del día</div>
+    {% if top_productos %}
+    <table>
+      <thead><tr><th>Producto</th><th class="text-right">Unidades</th><th class="text-right">Recaudado</th></tr></thead>
+      <tbody>
+        {% for p in top_productos %}
+        <tr>
+          <td>{{ p.nombre }}</td>
+          <td class="text-right">{{ p.total_vendido }}</td>
+          <td class="text-right text-yellow fw-bold">{{ p.total_pesos | pesos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-muted" style="text-align:center;padding:24px;">Sin ventas hoy</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚠ Stock bajo</div>
+    {% if stock_bajo %}
+    <table>
+      <thead><tr><th>Producto</th><th>Variante</th><th class="text-right">Stock</th></tr></thead>
+      <tbody>
+        {% for s in stock_bajo %}
+        <tr>
+          <td>{{ s.nombre }}</td>
+          <td class="text-muted">{{ s.talla or '' }}{% if s.talla and s.color %}/{% endif %}{{ s.color or '' }}</td>
+          <td class="text-right">
+            <span class="badge badge-danger">{{ s.stock }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-success" style="text-align:center;padding:24px;">✅ Todo el stock está OK</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<div class="card" style="margin-top:4px;">
+  <div class="flex-between">
+    <div class="card-title mb-0">Accesos rápidos</div>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">
+    <a href="{{ url_for('ventas.pos') }}" class="btn btn-primary btn-lg">🛒 Ir al POS</a>
+    <a href="{{ url_for('reportes.ventas_reporte') }}" class="btn btn-secondary btn-lg">📈 Ver reportes</a>
+    <a href="{{ url_for('reportes.stock') }}" class="btn btn-secondary btn-lg">📦 Ver stock</a>
+    <a href="{{ url_for('caja.turno') }}" class="btn btn-secondary btn-lg">💰 Caja</a>
+  </div>
+</div>
+{% endblock %}

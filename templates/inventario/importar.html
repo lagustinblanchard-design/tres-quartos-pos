@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Importar desde Excel{% endblock %}
+{% block page_title %}Importar productos desde Excel{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:400px 1fr;gap:20px;align-items:start;">
+  <div class="card">
+    <div class="card-title">1. Subir archivo</div>
+    <form method="POST" enctype="multipart/form-data" id="form-subir">
+      <div class="form-group">
+        <label class="form-label">Archivo Excel (.xlsx)</label>
+        <input type="file" name="archivo" class="form-control" accept=".xlsx,.xls" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Ver columnas del archivo</button>
+    </form>
+
+    {% if error %}
+    <div class="alert alert-danger" style="margin-top:12px;">{{ error }}</div>
+    {% endif %}
+
+    {% if cols %}
+    <div style="margin-top:24px;">
+      <div class="card-title">2. Mapear columnas</div>
+      <form method="POST" action="{{ url_for('inventario.importar_confirmar') }}">
+        {% set campos = [
+          ('col_nombre', 'Nombre del producto *'),
+          ('col_sku', 'SKU / Código'),
+          ('col_categoria', 'Categoría'),
+          ('col_precio_costo', 'Precio costo'),
+          ('col_precio_venta', 'Precio venta'),
+          ('col_talla', 'Talla'),
+          ('col_color', 'Color'),
+          ('col_stock', 'Stock'),
+        ] %}
+        {% for field, label in campos %}
+        <div class="form-group">
+          <label class="form-label">{{ label }}</label>
+          <select name="{{ field }}" class="form-control">
+            {% if 'costo' in field or 'venta' in field or 'sku' in field or 'talla' in field or 'color' in field or 'stock' in field or 'categoria' in field %}
+              <option value="">(no mapear)</option>
+            {% endif %}
+            {% for c in cols %}
+              <option value="{{ c }}" {% if c.lower() in label.lower() or label.lower() in c.lower() %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-block btn-lg" onclick="return confirm('¿Importar los productos? Los existentes con el mismo nombre se mantendrán.')">
+          ✅ Confirmar importación
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if preview %}
+  <div class="card">
+    <div class="card-title">Vista previa (primeras 10 filas)</div>
+    <div class="table-wrap" style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>{% for col in cols %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in preview %}
+          <tr>{% for col in cols %}<td>{{ row.get(col, '') }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-title">Instrucciones</div>
+    <p style="color:var(--text-muted);font-size:13px;line-height:1.7;">
+      Subí tu archivo Excel de productos. El sistema va a leer las columnas
+      y te va a pedir que indiques qué representa cada una.<br><br>
+      Columnas recomendadas en tu Excel:<br>
+      <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--yellow);">nombre, sku, categoria, precio_costo, precio_venta, talla, color, stock</code><br><br>
+      Si tenés varias filas por producto (una por talla/color), el sistema las agrupa automáticamente.
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

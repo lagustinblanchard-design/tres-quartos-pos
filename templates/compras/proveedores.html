@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Proveedores{% endblock %}
+{% block page_title %}Proveedores{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:360px 1fr;gap:20px;">
+  <div class="card">
+    <div class="card-title">Nuevo proveedor</div>
+    <form method="POST" action="{{ url_for('compras.nuevo_proveedor') }}">
+      <div class="form-group">
+        <label class="form-label">Nombre *</label>
+        <input type="text" name="nombre" class="form-control" required placeholder="Nombre del proveedor">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contacto</label>
+        <input type="text" name="contacto" class="form-control" placeholder="Nombre de contacto">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="text" name="telefono" class="form-control" placeholder="Ej: 1112345678">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" placeholder="email@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <textarea name="notas" class="form-control" rows="2" placeholder="Información adicional..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Guardar proveedor</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Lista de proveedores</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Notas</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for p in proveedores %}
+          <tr>
+            <td class="fw-bold">{{ p.nombre }}</td>
+            <td>{{ p.contacto or '—' }}</td>
+            <td>{{ p.telefono or '—' }}</td>
+            <td>{{ p.email or '—' }}</td>
+            <td class="text-muted">{{ p.notas or '—' }}</td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="editarProveedor({{ p.id }}, '{{ p.nombre }}', '{{ p.contacto or '' }}', '{{ p.telefono or '' }}', '{{ p.email or '' }}', `{{ p.notas or '' }}`)">Editar</button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-muted" style="text-align:center;padding:30px;">Sin proveedores</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar proveedor -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal-box">
+    <div class="modal-title">Editar proveedor</div>
+    <form method="POST" id="form-editar">
+      <div class="form-group">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="nombre" id="edit-nombre" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contacto</label>
+        <input type="text" name="contacto" id="edit-contacto" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="text" name="telefono" id="edit-telefono" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" id="edit-email" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <textarea name="notas" id="edit-notas" class="form-control" rows="2"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-editar').classList.remove('open')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editarProveedor(id, nombre, contacto, telefono, email, notas) {
+  document.getElementById('form-editar').action = `/compras/proveedores/${id}/editar`;
+  document.getElementById('edit-nombre').value = nombre;
+  document.getElementById('edit-contacto').value = contacto;
+  document.getElementById('edit-telefono').value = telefono;
+  document.getElementById('edit-email').value = email;
+  document.getElementById('edit-notas').value = notas;
+  document.getElementById('modal-editar').classList.add('open');
+}
+</script>
+{% endblock %}

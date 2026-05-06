@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Compras{% endblock %}
+{% block page_title %}Compras{% endblock %}
+
+{% block content %}
+<div class="flex-between" style="margin-bottom:20px;">
+  <div></div>
+  <a href="{{ url_for('compras.nueva') }}" class="btn btn-primary">+ Nueva compra</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Fecha</th><th>Proveedor</th><th>Vendedor</th><th>Estado</th><th class="text-right">Total</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for c in compras %}
+        <tr>
+          <td class="text-muted">#{{ c.id }}</td>
+          <td>{{ c.fecha | fecha_display }}</td>
+          <td>{{ c.proveedor_nombre or 'Sin proveedor' }}</td>
+          <td>{{ c.vendedor_nombre }}</td>
+          <td>
+            {% if c.estado == 'recibida' %}
+              <span class="badge badge-success">Recibida</span>
+            {% else %}
+              <span class="badge badge-warning">Pendiente</span>
+            {% endif %}
+          </td>
+          <td class="text-right fw-bold text-yellow">{{ c.total | pesos }}</td>
+          <td>
+            <a href="{{ url_for('compras.detalle', cid=c.id) }}" class="btn btn-secondary btn-sm">Ver</a>
+            {% if c.estado == 'pendiente' %}
+            <form method="POST" action="{{ url_for('compras.recibir', cid=c.id) }}" style="display:inline;"
+                  onsubmit="return confirm('¿Confirmar recepción? Esto actualizará el stock.')">
+              <button type="submit" class="btn btn-success btn-sm">Recibir</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted" style="text-align:center;padding:30px;">Sin compras registradas. <a href="{{ url_for('compras.nueva') }}" class="text-yellow">Crear la primera</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

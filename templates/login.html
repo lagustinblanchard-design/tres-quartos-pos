@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciar sesión — TRES QUARTOS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">TRES QUARTOS</div>
+      <div class="sub">Panel de Control · POS</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if vendedores %}
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">¿Quién sos?</div>
+        <form method="POST" id="login-form">
+          <div class="vendedor-grid" id="vendedor-grid">
+            {% for v in vendedores %}
+            <div class="vendedor-btn" onclick="selectVendedor({{ v.id }}, this)">
+              <div class="avatar">{{ v.nombre[0].upper() }}</div>
+              <div class="name">{{ v.nombre }}</div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <input type="hidden" name="vendedor_id" id="vendedor_id_input">
+
+          <div class="form-group" id="pin-group" style="display:none;">
+            <label class="form-label">PIN (si tiene)</label>
+            <input type="password" name="pin" class="form-control" placeholder="Dejá vacío si no tiene PIN" maxlength="8">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-ingresar" disabled>
+            Ingresar al sistema
+          </button>
+        </form>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="alert alert-warning">No hay vendedores registrados. Creá el primero:</div>
+        <form method="POST" action="{{ url_for('auth.nuevo_vendedor') }}">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" name="nombre" class="form-control" placeholder="Ej: Agustín" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">PIN (opcional)</label>
+            <input type="password" name="pin" class="form-control" placeholder="Dejar vacío para sin PIN" maxlength="8">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Crear vendedor</button>
+        </form>
+      </div>
+    {% endif %}
+
+    <div style="text-align:center; margin-top:16px;">
+      <a href="{{ url_for('auth.vendedores') }}" style="color:var(--text-muted);font-size:12px;text-decoration:none;">
+        ⚙ Gestionar vendedores
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function selectVendedor(id, el) {
+  document.querySelectorAll('.vendedor-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('vendedor_id_input').value = id;
+  document.getElementById('pin-group').style.display = 'block';
+  document.getElementById('btn-ingresar').disabled = false;
+}
+</script>
+</body>
+</html>

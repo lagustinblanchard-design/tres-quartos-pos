@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Caja — TRES QUARTOS{% endblock %}
+{% block page_title %}Caja{% endblock %}
+
+{% block content %}
+{% if turno %}
+  <!-- TURNO ABIERTO -->
+  <div class="kpi-grid" style="margin-bottom:24px;">
+    <div class="kpi-card">
+      <div class="kpi-label">Vendedor</div>
+      <div class="kpi-value" style="font-size:18px;">{{ turno.vendedor_nombre }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Apertura</div>
+      <div class="kpi-value" style="font-size:16px;">{{ turno.fecha_apertura | fecha_display }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Monto inicial</div>
+      <div class="kpi-value">{{ turno.monto_inicial | pesos }}</div>
+    </div>
+    {% if resumen %}
+    <div class="kpi-card">
+      <div class="kpi-label">Total ventas</div>
+      <div class="kpi-value">{{ resumen.total_ventas | pesos }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+    {% if resumen %}
+    <div class="card">
+      <div class="card-title">Resumen del turno</div>
+      <table>
+        <thead><tr><th>Método de pago</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+          {% for v in resumen.ventas %}
+          <tr>
+            <td>{{ v.metodo_pago | capitalize }}</td>
+            <td class="text-right text-yellow fw-bold">{{ v.total | pesos }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="text-muted">Sin ventas aún</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+        <div class="total-row"><span>Ingresos extra:</span><span class="text-success">+ {{ resumen.ingresos_extra | pesos }}</span></div>
+        <div class="total-row"><span>Egresos extra:</span><span class="text-danger">- {{ resumen.egresos_extra | pesos }}</span></div>
+        <div class="total-row fw-bold fs-large"><span>Efectivo esperado:</span><span class="text-yellow">{{ resumen.arqueo_esperado | pesos }}</span></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-title">Cerrar turno</div>
+      <form method="POST" action="{{ url_for('caja.cerrar') }}" onsubmit="return confirm('¿Cerrar el turno actual?')">
+        <div class="form-group">
+          <label class="form-label">Efectivo contado al cierre ($)</label>
+          <input type="number" name="monto_final" class="form-control" min="0" step="1"
+                 placeholder="Contá el efectivo en caja...">
+        </div>
+        <button type="submit" class="btn btn-danger btn-block">Cerrar turno</button>
+      </form>
+    </div>
+  </div>
+
+{% else %}
+  <!-- SIN TURNO -->
+  <div class="card" style="max-width:400px;">
+    <div class="card-title">Abrir turno de caja</div>
+    <form method="POST" action="{{ url_for('caja.abrir') }}">
+      <div class="form-group">
+        <label class="form-label">Monto inicial en efectivo ($)</label>
+        <input type="number" name="monto_inicial" class="form-control" min="0" step="1"
+               placeholder="Ej: 10000" autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Abrir turno</button>
+    </form>
+  </div>
+{% endif %}
+
+{% if turnos_hist %}
+<div class="card" style="margin-top:24px;">
+  <div class="card-title">Historial de turnos</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Vendedor</th><th>Apertura</th><th>Cierre</th><th>Monto inicial</th><th>Monto final</th></tr>
+      </thead>
+      <tbody>
+        {% for t in turnos_hist %}
+        <tr>
+          <td>{{ t.vendedor_nombre }}</td>
+          <td>{{ t.fecha_apertura | fecha_display }}</td>
+          <td>{{ t.fecha_cierre | fecha_display if t.fecha_cierre else '—' }}</td>
+          <td>{{ t.monto_inicial | pesos }}</td>
+          <td>{{ t.monto_final | pesos if t.monto_final is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

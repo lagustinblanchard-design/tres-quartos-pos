@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Compra #{{ compra.id }}{% endblock %}
+{% block page_title %}Compra #{{ compra.id }}{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:20px;">
+  <div class="card">
+    <div class="card-title">Ítems recibidos</div>
+    <table>
+      <thead>
+        <tr><th>Producto</th><th>Variante</th><th>Cantidad</th><th>Precio costo</th><th class="text-right">Subtotal</th></tr>
+      </thead>
+      <tbody>
+        {% for i in items %}
+        <tr>
+          <td class="fw-bold">{{ i.nombre }}</td>
+          <td class="text-muted">{{ i.talla or '' }}{% if i.talla and i.color %}/{% endif %}{{ i.color or '' }}</td>
+          <td>{{ i.cantidad }}</td>
+          <td>{{ i.precio_costo | pesos }}</td>
+          <td class="text-right text-yellow fw-bold">{{ i.subtotal | pesos }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Resumen</div>
+    <div class="total-row"><span class="text-muted">Proveedor</span><span>{{ compra.proveedor_nombre or '—' }}</span></div>
+    <div class="total-row"><span class="text-muted">Fecha</span><span>{{ compra.fecha | fecha_display }}</span></div>
+    <div class="total-row"><span class="text-muted">Estado</span>
+      {% if compra.estado == 'recibida' %}
+        <span class="badge badge-success">Recibida</span>
+      {% else %}
+        <span class="badge badge-warning">Pendiente</span>
+      {% endif %}
+    </div>
+    <div class="total-row fw-bold fs-large" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+      <span>TOTAL</span><span class="text-yellow">{{ compra.total | pesos }}</span>
+    </div>
+    {% if compra.notas %}
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">{{ compra.notas }}</div>
+    {% endif %}
+    {% if compra.estado == 'pendiente' %}
+    <form method="POST" action="{{ url_for('compras.recibir', cid=compra.id) }}" style="margin-top:16px;"
+          onsubmit="return confirm('¿Confirmar recepción? El stock se actualizará.')">
+      <button type="submit" class="btn btn-success btn-block">✅ Marcar como recibida</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+<a href="{{ url_for('compras.lista') }}" class="btn btn-secondary" style="margin-top:8px;">← Volver</a>
+{% endblock %}

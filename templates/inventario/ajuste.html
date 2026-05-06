@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Ajuste de Stock{% endblock %}
+{% block page_title %}Ajuste de Stock{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:500px;">
+  <div class="card-title">Ajustar stock de una variante</div>
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">Producto / Variante</label>
+      <select name="variante_id" class="form-control" required>
+        <option value="">Seleccionar...</option>
+        {% for v in variantes %}
+          <option value="{{ v.id }}">{{ v.producto_nombre }} — {{ v.talla or '—' }} / {{ v.color or '—' }} (stock: {{ v.stock }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cantidad a agregar (negativo para restar)</label>
+      <input type="number" name="cantidad" class="form-control" required placeholder="Ej: 5 para sumar, -2 para restar">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Motivo</label>
+      <input type="text" name="motivo" class="form-control" value="Ajuste manual" placeholder="Ej: Conteo de inventario">
+    </div>
+    <button type="submit" class="btn btn-primary">Aplicar ajuste</button>
+    <a href="{{ url_for('inventario.lista') }}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

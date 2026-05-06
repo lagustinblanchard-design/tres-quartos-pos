@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TRES QUARTOS POS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">TRES QUARTOS</div>
+    <div class="sub">Panel de Control</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Ventas</div>
+    <a href="{{ url_for('ventas.pos') }}" class="nav-item {% if active == 'pos' %}active{% endif %}">
+      <span class="icon">🛒</span> Punto de Venta
+    </a>
+    <a href="{{ url_for('ventas.historial') }}" class="nav-item {% if active == 'historial' %}active{% endif %}">
+      <span class="icon">📋</span> Historial
+    </a>
+
+    <div class="nav-section">Gestión</div>
+    <a href="{{ url_for('inventario.lista') }}" class="nav-item {% if active == 'inventario' %}active{% endif %}">
+      <span class="icon">📦</span> Inventario
+    </a>
+    <a href="{{ url_for('compras.lista') }}" class="nav-item {% if active == 'compras' %}active{% endif %}">
+      <span class="icon">🛍️</span> Compras
+    </a>
+    <a href="{{ url_for('compras.proveedores') }}" class="nav-item {% if active == 'proveedores' %}active{% endif %}">
+      <span class="icon">🤝</span> Proveedores
+    </a>
+
+    <div class="nav-section">Caja</div>
+    <a href="{{ url_for('caja.turno') }}" class="nav-item {% if active == 'caja' %}active{% endif %}">
+      <span class="icon">💰</span> Caja
+    </a>
+    <a href="{{ url_for('caja.movimientos') }}" class="nav-item {% if active == 'movimientos' %}active{% endif %}">
+      <span class="icon">↕️</span> Movimientos
+    </a>
+
+    <div class="nav-section">Análisis</div>
+    <a href="{{ url_for('reportes.dashboard') }}" class="nav-item {% if active == 'dashboard' %}active{% endif %}">
+      <span class="icon">📊</span> Dashboard
+    </a>
+    <a href="{{ url_for('reportes.ventas_reporte') }}" class="nav-item {% if active == 'reportes' %}active{% endif %}">
+      <span class="icon">📈</span> Reportes
+    </a>
+    <a href="{{ url_for('inventario.importar') }}" class="nav-item {% if active == 'importar' %}active{% endif %}">
+      <span class="icon">⬆️</span> Importar Excel
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div>Vendedor:</div>
+    <div class="vendedor-name">{{ session.get('vendedor_nombre', '—') }}</div>
+    <a href="{{ url_for('auth.logout') }}" style="color:var(--text-muted);font-size:11px;text-decoration:none;margin-top:6px;display:inline-block;">
+      Cambiar vendedor ↗
+    </a>
+  </div>
+</aside>
+
+<div class="main-content">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="hamburger-btn" id="hamburger-btn" aria-label="Menú">☰</button>
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    </div>
+    <div class="topbar-meta">
+      {% if session.get('turno_id') %}
+        <span class="badge badge-success">● Turno abierto</span>
+      {% else %}
+        <a href="{{ url_for('caja.turno') }}" class="badge badge-warning">⚠ Sin turno activo</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="page-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- Bottom nav (mobile only) -->
+<nav class="bottom-nav">
+  <a href="{{ url_for('ventas.pos') }}" class="{% if active == 'pos' %}active{% endif %}">
+    <span class="bn-icon">🛒</span>Venta
+  </a>
+  <a href="{{ url_for('inventario.lista') }}" class="{% if active == 'inventario' %}active{% endif %}">
+    <span class="bn-icon">📦</span>Stock
+  </a>
+  <a href="{{ url_for('caja.turno') }}" class="{% if active == 'caja' %}active{% endif %}">
+    <span class="bn-icon">💰</span>Caja
+  </a>
+  <a href="{{ url_for('reportes.dashboard') }}" class="{% if active == 'dashboard' %}active{% endif %}">
+    <span class="bn-icon">📊</span>Dashboard
+  </a>
+  <a href="#" onclick="toggleSidebar();return false;">
+    <span class="bn-icon">☰</span>Menú
+  </a>
+</nav>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  function toggleSidebar() {
+    var s = document.getElementById('sidebar');
+    var o = document.getElementById('sidebar-overlay');
+    s.classList.toggle('open');
+    o.classList.toggle('open');
+  }
+  document.getElementById('hamburger-btn').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebar-overlay').addEventListener('click', toggleSidebar);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

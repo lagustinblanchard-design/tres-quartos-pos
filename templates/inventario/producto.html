@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if producto else 'Nuevo' }} Producto — TRES QUARTOS{% endblock %}
+{% block page_title %}{{ 'Editar' if producto else 'Nuevo' }} Producto{% endblock %}
+
+{% block content %}
+<form method="POST">
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+
+    <!-- Datos generales -->
+    <div class="card">
+      <div class="card-title">Datos del producto</div>
+
+      <div class="form-group">
+        <label class="form-label">Nombre *</label>
+        <input type="text" name="nombre" class="form-control" required
+               value="{{ producto.nombre if producto else '' }}" placeholder="Ej: Remera All Blacks">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">SKU / Código</label>
+          <input type="text" name="sku" class="form-control"
+                 value="{{ producto.sku if producto else '' }}" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select name="categoria_id" class="form-control">
+            <option value="">Sin categoría</option>
+            {% for c in categorias %}
+              <option value="{{ c.id }}" {% if producto and producto.categoria_id == c.id %}selected{% endif %}>
+                {{ c.nombre }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea name="descripcion" class="form-control" rows="3" placeholder="Materiales, características...">{{ producto.descripcion if producto else '' }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Precio de costo ($)</label>
+          <input type="number" name="precio_costo" class="form-control" step="1" min="0"
+                 value="{{ producto.precio_costo if producto else 0 }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio de venta ($)</label>
+          <input type="number" name="precio_venta" class="form-control" step="1" min="0"
+                 value="{{ producto.precio_venta if producto else 0 }}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Variantes -->
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <div class="card-title mb-0">Variantes (talla / color / stock)</div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addVariante()">+ Agregar</button>
+      </div>
+
+      <div id="variantes-container">
+        {% if variantes %}
+          {% for v in variantes %}
+          <div class="variante-row" style="display:grid;grid-template-columns:1fr 1fr 80px 80px 28px;gap:8px;margin-bottom:8px;align-items:center;">
+            <input type="text" name="talla[]" class="form-control" placeholder="Talla" value="{{ v.talla }}">
+            <input type="text" name="color[]" class="form-control" placeholder="Color" value="{{ v.color }}">
+            <input type="number" name="stock[]" class="form-control" placeholder="Stock" min="0" value="{{ v.stock }}">
+            <input type="number" name="stock_min[]" class="form-control" placeholder="Mín" min="0" value="{{ v.stock_minimo }}">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="variante-row" style="display:grid;grid-template-columns:1fr 1fr 80px 80px 28px;gap:8px;margin-bottom:8px;align-items:center;">
+            <input type="text" name="talla[]" class="form-control" placeholder="Talla (ej: S, M, L)">
+            <input type="text" name="color[]" class="form-control" placeholder="Color (ej: Negro)">
+            <input type="number" name="stock[]" class="form-control" placeholder="Stock" min="0" value="0">
+            <input type="number" name="stock_min[]" class="form-control" placeholder="Mín" min="0" value="0">
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+        Talla = M, L, XL… &nbsp;|&nbsp; Color = Negro, Blanco… &nbsp;|&nbsp; Stock mín = alerta de stock bajo
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-8 mt-16">
+    <button type="submit" class="btn btn-primary btn-lg">
+      {{ '💾 Guardar cambios' if producto else '✅ Crear producto' }}
+    </button>
+    <a href="{{ url_for('inventario.lista') }}" class="btn btn-secondary btn-lg">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addVariante() {
+  const tpl = `<div class="variante-row" style="display:grid;grid-template-columns:1fr 1fr 80px 80px 28px;gap:8px;margin-bottom:8px;align-items:center;">
+    <input type="text" name="talla[]" class="form-control" placeholder="Talla">
+    <input type="text" name="color[]" class="form-control" placeholder="Color">
+    <input type="number" name="stock[]" class="form-control" placeholder="Stock" min="0" value="0">
+    <input type="number" name="stock_min[]" class="form-control" placeholder="Mín" min="0" value="0">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+  document.getElementById('variantes-container').insertAdjacentHTML('beforeend', tpl);
+}
+</script>
+{% endblock %}

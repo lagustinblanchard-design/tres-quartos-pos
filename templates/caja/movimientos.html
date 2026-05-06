@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Movimientos de Caja{% endblock %}
+{% block page_title %}Movimientos de Caja{% endblock %}
+
+{% block content %}
+<div style="display:grid; grid-template-columns: 360px 1fr; gap:20px;">
+  <div class="card">
+    <div class="card-title">Nuevo movimiento</div>
+    {% if session.get('turno_id') %}
+    <form method="POST" action="{{ url_for('caja.nuevo_movimiento') }}">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-control" required>
+          <option value="ingreso">Ingreso de efectivo</option>
+          <option value="egreso">Egreso / Retiro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Concepto</label>
+        <input type="text" name="concepto" class="form-control" required placeholder="Ej: Compra de bolsas, Retiro de fondo...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monto ($)</label>
+        <input type="number" name="monto" class="form-control" min="1" step="1" required placeholder="0">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Registrar</button>
+    </form>
+    {% else %}
+      <div class="alert alert-warning">Abrí un turno de caja para registrar movimientos.</div>
+      <a href="{{ url_for('caja.turno') }}" class="btn btn-primary btn-block">Ir a Caja</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Movimientos del turno actual</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="text-right">Monto</th></tr>
+        </thead>
+        <tbody>
+          {% for m in movimientos %}
+          <tr>
+            <td class="text-muted">{{ m.fecha | fecha_display }}</td>
+            <td>
+              {% if m.tipo == 'ingreso' %}
+                <span class="badge badge-success">Ingreso</span>
+              {% else %}
+                <span class="badge badge-danger">Egreso</span>
+              {% endif %}
+            </td>
+            <td>{{ m.concepto }}</td>
+            <td class="text-right fw-bold {% if m.tipo == 'ingreso' %}text-success{% else %}text-danger{% endif %}">
+              {{ ('+' if m.tipo == 'ingreso' else '-') }}{{ m.monto | pesos }}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px;">Sin movimientos registrados</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Inventario — TRES QUARTOS{% endblock %}
+{% block page_title %}Inventario{% endblock %}
+
+{% block content %}
+<div class="flex-between" style="margin-bottom:20px;">
+  <form method="GET" class="flex gap-8" style="flex:1; max-width:600px;">
+    <div class="search-bar" style="flex:1;">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="q" class="form-control" placeholder="Buscar por nombre o SKU..." value="{{ q }}">
+    </div>
+    <select name="cat" class="form-control" style="width:180px;">
+      <option value="">Todas las categorías</option>
+      {% for c in categorias %}
+        <option value="{{ c.id }}" {% if cat == c.id|string %}selected{% endif %}>{{ c.nombre }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary">Filtrar</button>
+  </form>
+  <div class="flex gap-8">
+    <a href="{{ url_for('inventario.nuevo') }}" class="btn btn-primary">+ Nuevo producto</a>
+    <a href="{{ url_for('inventario.ajuste') }}" class="btn btn-secondary">Ajustar stock</a>
+  </div>
+</div>
+
+<div class="card mb-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Costo</th>
+          <th>Precio venta</th>
+          <th>Stock total</th>
+          <th>Margen</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        {% set margen = ((p.precio_venta - p.precio_costo) / p.precio_venta * 100) if p.precio_venta > 0 else 0 %}
+        <tr>
+          <td class="text-muted">{{ p.sku or '—' }}</td>
+          <td><span class="fw-bold">{{ p.nombre }}</span></td>
+          <td>{{ p.categoria_nombre or '—' }}</td>
+          <td>{{ p.precio_costo | pesos }}</td>
+          <td class="text-yellow fw-bold">{{ p.precio_venta | pesos }}</td>
+          <td>
+            {% if p.stock_total == 0 %}
+              <span class="badge badge-danger">Sin stock</span>
+            {% elif p.stock_total < 3 %}
+              <span class="badge badge-warning">{{ p.stock_total }}</span>
+            {% else %}
+              <span class="badge badge-success">{{ p.stock_total }}</span>
+            {% endif %}
+          </td>
+          <td>{{ "%.0f"|format(margen) }}%</td>
+          <td>
+            <a href="{{ url_for('inventario.editar', pid=p.id) }}" class="btn btn-secondary btn-sm">Editar</a>
+            <form method="POST" action="{{ url_for('inventario.eliminar', pid=p.id) }}" style="display:inline;" onsubmit="return confirm('¿Desactivar producto?')">
+              <button type="submit" class="btn btn-danger btn-sm">✕</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-muted" style="text-align:center;padding:30px;">Sin productos. <a href="{{ url_for('inventario.nuevo') }}" class="text-yellow">Crear el primero</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
