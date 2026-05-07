@@ -286,11 +286,12 @@ def importar_confirmar():
         db.execute("UPDATE productos SET precio_venta=%s, precio_costo=%s WHERE id=%s",
                    (venta, costo, prods_existentes[nombre]))
 
-    # Tercer paso: insertar variantes en batch
+    # Tercer paso: insertar variantes solo para productos NUEVOS
+    nombres_nuevos = {row[0] for row in nuevos_prods_uniq}
     variantes = [
         (prods_existentes[n], t, col, st)
         for n, s, c, co, v, t, col, st in filas_limpias
-        if (t or col or st) and n in prods_existentes
+        if (t or col or st) and n in nombres_nuevos
     ]
     if variantes:
         placeholders = ",".join(["(%s,%s,%s,%s)" for _ in variantes])
