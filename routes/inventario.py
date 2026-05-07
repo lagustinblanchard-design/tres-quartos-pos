@@ -279,6 +279,13 @@ def importar_confirmar():
         for r in result.fetchall():
             prods_existentes[r["nombre"]] = r["id"]
 
+    # Actualizar precios de productos existentes si el precio importado es > 0
+    prods_actualizar = list({n: (co, v) for n, s, c, co, v, *_ in filas_limpias
+                             if n in prods_existentes and v > 0}.items())
+    for nombre, (costo, venta) in prods_actualizar:
+        db.execute("UPDATE productos SET precio_venta=%s, precio_costo=%s WHERE id=%s",
+                   (venta, costo, prods_existentes[nombre]))
+
     # Tercer paso: insertar variantes en batch
     variantes = [
         (prods_existentes[n], t, col, st)
