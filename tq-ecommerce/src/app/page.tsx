@@ -1,101 +1,192 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Truck, Shield, RotateCcw, MessageCircle } from "lucide-react";
+import { StoreHeader } from "@/components/layout/store-header";
+import { StoreFooter } from "@/components/layout/store-footer";
+import { CartProvider } from "@/lib/cart-context";
+import { CartDrawer } from "@/components/store/cart-drawer";
 
-export default function Home() {
+const categories = [
+  { name: "Rugby", slug: "rugby", emoji: "🏉", desc: "Botines, camisetas, protecciones" },
+  { name: "Fútbol", slug: "futbol", emoji: "⚽", desc: "Botines, camisetas, medias" },
+  { name: "Running", slug: "running", emoji: "👟", desc: "Zapatillas, ropa técnica" },
+  { name: "Accesorios", slug: "accesorios", emoji: "🎽", desc: "Medias, vendas, botiquín" },
+];
+
+const benefits = [
+  { icon: Truck, title: "Envío gratis", desc: "En compras mayores a $50.000" },
+  { icon: Shield, title: "Compra segura", desc: "Pago protegido con MercadoPago" },
+  { icon: RotateCcw, title: "Cambios gratis", desc: "Hasta 30 días sin cargo" },
+  { icon: MessageCircle, title: "Soporte", desc: "Atención por WhatsApp y email" },
+];
+
+const values = [
+  { label: "Comunidad", desc: "Somos parte del deporte, no solo un negocio" },
+  { label: "Honestidad", desc: "Artículos descritos tal cual son" },
+  { label: "Accesibilidad", desc: "El deporte para todos los bolsillos" },
+  { label: "Pasión", desc: "Amamos el deporte. Se nota." },
+];
+
+export default function HomePage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <CartProvider>
+      <div className="min-h-screen flex flex-col">
+        <StoreHeader />
+        <main className="flex-1">
+          <div>
+            {/* Hero — Carbón TQ con acento amarillo */}
+            <section className="relative bg-[#3A3A3A] text-white overflow-hidden">
+              <div className="absolute inset-0 opacity-5">
+                <div className="absolute inset-0" style={{
+                  backgroundImage: "repeating-linear-gradient(45deg, #F5C200 0px, #F5C200 1px, transparent 0px, transparent 50%)",
+                  backgroundSize: "20px 20px",
+                }} />
+              </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
+              <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
+                <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#F5C200]/20 border border-[#F5C200]/40 px-4 py-1.5 mb-6">
+                    <span className="text-[#F5C200] text-xs font-barlow font-semibold uppercase tracking-widest">
+                      Nueva colección 2026
+                    </span>
+                  </div>
+                  <h1 className="font-barlow font-bold text-5xl md:text-7xl mb-4 leading-none uppercase tracking-tight">
+                    Donde el rugby
+                    <br />
+                    <span className="text-[#F5C200]">sigue vivo.</span>
+                  </h1>
+                  <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+                    Equipate bien. Pagá menos. Del vestuario a tu equipo — botines, camisetas y todo lo que necesitás para jugar.
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <Button size="lg" className="bg-[#F5C200] text-[#3A3A3A] hover:bg-[#F5C200]/90 font-barlow font-bold uppercase tracking-wide text-base" asChild>
+                      <Link href="/catalogo">
+                        Ver catálogo <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 font-semibold" asChild>
+                      <Link href="/catalogo?cat=rugby">Solo rugby</Link>
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-8 mt-12 pt-8 border-t border-white/10">
+                    {[["Rugby", "Especialistas"], ["30 días", "Cambios gratis"], ["MP + Transfer", "Métodos de pago"]].map(([val, label]) => (
+                      <div key={label}>
+                        <p className="font-barlow font-bold text-[#F5C200] text-lg">{val}</p>
+                        <p className="text-xs text-gray-400">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#F5C200]" />
+            </section>
+
+            {/* Benefits bar */}
+            <section className="border-b bg-[#F0F0F0]">
+              <div className="container mx-auto px-4 py-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {benefits.map(({ icon: Icon, title, desc }) => (
+                    <div key={title} className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A3A3A] shrink-0">
+                        <Icon className="h-5 w-5 text-[#F5C200]" />
+                      </div>
+                      <div>
+                        <p className="font-barlow font-bold text-[#3A3A3A] text-sm uppercase tracking-wide">{title}</p>
+                        <p className="text-xs text-[#6B6B6B]">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Categories */}
+            <section className="container mx-auto px-4 py-16">
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <p className="text-xs font-barlow font-semibold text-[#F5C200] uppercase tracking-widest mb-1">Explorá</p>
+                  <h2 className="font-barlow font-bold text-4xl text-[#3A3A3A] uppercase">Categorías</h2>
+                </div>
+                <Button variant="outline" className="border-[#3A3A3A] text-[#3A3A3A] hover:bg-[#3A3A3A] hover:text-white font-barlow font-semibold uppercase tracking-wide" asChild>
+                  <Link href="/catalogo">Ver todo</Link>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {categories.map((cat) => (
+                  <Link key={cat.slug} href={`/catalogo?cat=${cat.slug}`} className="group">
+                    <div className="rounded-xl bg-[#3A3A3A] overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5 duration-200">
+                      <div className="aspect-[4/3] flex items-center justify-center text-6xl bg-[#3A3A3A] group-hover:bg-[#F5C200]/10 transition-colors">
+                        {cat.emoji}
+                      </div>
+                      <div className="p-4 border-t border-white/10">
+                        <h3 className="font-barlow font-bold text-white uppercase tracking-wide group-hover:text-[#F5C200] transition-colors">
+                          {cat.name}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* Values section */}
+            <section className="bg-[#F0F0F0] py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-10">
+                  <p className="text-xs font-barlow font-semibold text-[#F5C200] uppercase tracking-widest mb-1">Quiénes somos</p>
+                  <h2 className="font-barlow font-bold text-4xl text-[#3A3A3A] uppercase">Nuestros valores</h2>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {values.map((v) => (
+                    <div key={v.label} className="rounded-xl bg-white border border-gray-200 p-5">
+                      <div className="h-1 w-8 bg-[#F5C200] rounded mb-3" />
+                      <h3 className="font-barlow font-bold text-[#3A3A3A] uppercase tracking-wide mb-1">{v.label}</h3>
+                      <p className="text-sm text-[#6B6B6B]">{v.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* CTA Banner */}
+            <section className="bg-[#F5C200] py-16">
+              <div className="container mx-auto px-4 text-center">
+                <p className="font-barlow font-semibold text-[#3A3A3A]/70 uppercase tracking-widest text-sm mb-2">¿Tenés un club o equipo?</p>
+                <h2 className="font-barlow font-bold text-4xl md:text-5xl text-[#3A3A3A] uppercase mb-4">
+                  Precios especiales
+                  <br />para pedidos en cantidad
+                </h2>
+                <p className="text-[#3A3A3A]/70 text-lg mb-8">
+                  Camisetas con número, equipamiento completo. Consultá sin compromiso.
+                </p>
+                <Button size="lg" className="bg-[#3A3A3A] text-white hover:bg-black font-barlow font-bold uppercase tracking-wide text-base" asChild>
+                  <a href="https://wa.me/5491100000000" target="_blank" rel="noopener noreferrer">
+                    Consultar por WhatsApp
+                  </a>
+                </Button>
+              </div>
+            </section>
+          </div>
+        </main>
+        <StoreFooter />
+        <CartDrawer />
+
         <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          href="https://wa.me/5491100000000"
           target="_blank"
           rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-500 shadow-lg hover:bg-green-600 transition-colors"
+          aria-label="WhatsApp"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
+          <svg viewBox="0 0 24 24" className="h-7 w-7 fill-white">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+          </svg>
         </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </CartProvider>
   );
 }
