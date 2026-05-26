@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Truck, Shield, RotateCcw, MessageCircle } from "lucide-react";
