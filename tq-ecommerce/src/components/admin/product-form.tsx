@@ -15,11 +15,11 @@ const variantSchema = z.object({
   size: z.string().optional(),
   color: z.string().optional(),
   colorHex: z.string().optional(),
-  price: z.number().min(1, "Precio requerido"),
-  costPrice: z.number().min(0).optional(),
+  price: z.coerce.number().min(1, "Precio requerido"),
+  costPrice: z.coerce.number().min(0).optional(),
   barcode: z.string().optional(),
-  stock: z.number().int().min(0),
-  stockAlert: z.number().int().min(0),
+  stock: z.coerce.number().int().min(0),
+  stockAlert: z.coerce.number().int().min(0),
   isActive: z.boolean(),
 });
 
