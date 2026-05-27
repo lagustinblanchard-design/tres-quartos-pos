@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, PlusCircle, X } from "lucide-react";
 
 const variantSchema = z.object({
   id: z.string().optional(),
@@ -83,6 +83,11 @@ export function ProductForm({
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [expandedVariant, setExpandedVariant] = useState<number | null>(0);
+  const [cats, setCats] = useState<Category[]>(categories);
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [savingCat, setSavingCat] = useState(false);
+  const [catError, setCatError] = useState("");
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -114,6 +119,24 @@ export function ProductForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "variants" });
+
+  async function createCategory() {
+    if (!newCatName.trim()) return;
+    setSavingCat(true);
+    setCatError("");
+    const res = await fetch("/api/admin/categorias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newCatName.trim() }),
+    });
+    const data = await res.json();
+    setSavingCat(false);
+    if (!res.ok) { setCatError(data.error ?? "Error al crear"); return; }
+    setCats((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    setValue("categoryId", data.id);
+    setNewCatName("");
+    setShowNewCat(false);
+  }
 
   // Auto-generate slug from name
   const nameVal = watch("name");
@@ -212,10 +235,36 @@ export function ProductForm({
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Categoría *</label>
-            <select {...register("categoryId")} className="w-full rounded-md border px-3 py-2 text-sm bg-white">
-              <option value="">Seleccionar...</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex gap-2">
+              <select {...register("categoryId")} className="flex-1 rounded-md border px-3 py-2 text-sm bg-white">
+                <option value="">Seleccionar...</option>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => { setShowNewCat((v) => !v); setCatError(""); setNewCatName(""); }}
+                className="shrink-0 text-blue-600 hover:text-blue-800 transition-colors"
+                title="Nueva categoría"
+              >
+                {showNewCat ? <X className="h-5 w-5" /> : <PlusCircle className="h-5 w-5" />}
+              </button>
+            </div>
+            {showNewCat && (
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createCategory())}
+                  placeholder="Nombre de la categoría..."
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <Button type="button" size="sm" onClick={createCategory} disabled={savingCat || !newCatName.trim()} className="shrink-0">
+                  {savingCat ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Crear"}
+                </Button>
+              </div>
+            )}
+            {catError && <p className="text-xs text-red-500">{catError}</p>}
             {errors.categoryId && <p className="text-xs text-red-500">{errors.categoryId.message}</p>}
           </div>
           <div className="space-y-1.5">
