@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ShoppingBag, MapPin, Phone, Mail } from "lucide-react";
+import { ArrowLeft, ShoppingBag, MapPin, Phone, Mail, Trophy } from "lucide-react";
+import { getLoyaltyStatus, LOYALTY_MIN_PURCHASE } from "@/lib/loyalty";
+import { AcreditarLoyaltyBtn } from "@/components/admin/acreditar-loyalty-btn";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,7 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
         select: {
           id: true, number: true, status: true, channel: true,
           total: true, paymentMethod: true, createdAt: true,
+          loyaltyTransaction: { select: { id: true } },
         },
       },
     },
@@ -35,8 +38,15 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
 
   if (!user || user.role !== "CLIENTE") notFound();
 
-  const totalSpent = user.orders
-    .reduce((acc, o) => acc + Number(o.total), 0);
+  const totalSpent = user.orders.reduce((acc, o) => acc + Number(o.total), 0);
+  const loyalty = await getLoyaltyStatus(user.id);
+
+  const MILESTONES = [
+    { count: 3, discount: 15 },
+    { count: 5, discount: 25 },
+    { count: 10, discount: 50 },
+    { count: 20, discount: 60 },
+  ];
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -112,6 +122,50 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
               </div>
             )}
           </div>
+
+          {/* Try Club status */}
+          <div className="rounded-xl border-2 border-[#F5C200] bg-[#3A3A3A] p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="h-4 w-4 text-[#F5C200]" />
+              <span className="text-xs font-bold text-[#F5C200] uppercase tracking-widest">Try Club</span>
+            </div>
+            <p className="text-white text-2xl font-bold">{loyalty.qualifyingCount}</p>
+            <p className="text-gray-400 text-xs mt-0.5">compras calificadas</p>
+
+            <div className="mt-3 h-2 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[#F5C200] transition-all"
+                style={{ width: `${loyalty.progressPct}%` }}
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-4 gap-1">
+              {MILESTONES.map((m) => {
+                const achieved = loyalty.qualifyingCount >= m.count;
+                return (
+                  <div
+                    key={m.count}
+                    className={`rounded p-1.5 text-center border ${achieved ? "border-[#F5C200] bg-[#F5C200]/15" : "border-white/10 bg-white/5"}`}
+                  >
+                    <p className={`font-bold text-sm leading-none ${achieved ? "text-[#F5C200]" : "text-gray-600"}`}>{m.count}</p>
+                    <p className={`text-xs mt-0.5 ${achieved ? "text-white" : "text-gray-700"}`}>{m.discount}%</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {loyalty.availableCoupons.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <p className="text-xs text-[#F5C200] font-semibold mb-1.5">Cupones activos</p>
+                {loyalty.availableCoupons.map((c) => (
+                  <div key={c.id} className="flex justify-between items-center text-xs mb-1">
+                    <span className="font-mono text-[#F5C200]">{c.code}</span>
+                    <span className="text-white font-semibold">{c.discountPct}% OFF</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Orders */}
@@ -124,25 +178,40 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
             <p className="px-5 py-8 text-sm text-gray-400 text-center">Sin pedidos aún</p>
           ) : (
             <div className="divide-y">
-              {user.orders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/admin/pedidos/${order.id}`}
-                  className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <span className="font-mono text-xs text-gray-400 shrink-0">#{order.number}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-600"}`}>
-                    {STATUS_LABELS[order.status] ?? order.status}
-                  </span>
-                  <span className="text-xs text-gray-400 shrink-0">
-                    {order.channel === "POS" ? "POS" : "Online"}
-                  </span>
-                  <span className="flex-1 text-xs text-gray-400">
-                    {new Date(order.createdAt).toLocaleDateString("es-AR")}
-                  </span>
-                  <span className="font-bold text-sm shrink-0">{fmt(Number(order.total))}</span>
-                </Link>
-              ))}
+              {user.orders.map((order) => {
+                const credited = !!order.loyaltyTransaction;
+                const eligible = Number(order.total) >= LOYALTY_MIN_PURCHASE && order.status !== "CANCELADO";
+                return (
+                  <div key={order.id} className="flex items-center gap-3 px-5 py-3">
+                    <Link
+                      href={`/admin/pedidos/${order.id}`}
+                      className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                    >
+                      <span className="font-mono text-xs text-gray-400 shrink-0">#{order.number}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {STATUS_LABELS[order.status] ?? order.status}
+                      </span>
+                      <span className="text-xs text-gray-400 shrink-0">
+                        {order.channel === "POS" ? "POS" : "Online"}
+                      </span>
+                      <span className="flex-1 text-xs text-gray-400 truncate">
+                        {new Date(order.createdAt).toLocaleDateString("es-AR")}
+                      </span>
+                      <span className="font-bold text-sm shrink-0">{fmt(Number(order.total))}</span>
+                    </Link>
+
+                    <div className="shrink-0 w-24 flex justify-end">
+                      {credited ? (
+                        <span className="flex items-center gap-1 text-xs text-[#F5C200] bg-[#3A3A3A] px-2 py-1 rounded-lg font-medium">
+                          <Trophy className="h-3 w-3" /> Try Club
+                        </span>
+                      ) : eligible ? (
+                        <AcreditarLoyaltyBtn orderId={order.id} />
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
