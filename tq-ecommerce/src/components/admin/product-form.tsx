@@ -15,11 +15,11 @@ const variantSchema = z.object({
   size: z.string().optional(),
   color: z.string().optional(),
   colorHex: z.string().optional(),
-  price: z.coerce.number().min(1, "Precio requerido"),
-  costPrice: z.coerce.number().min(0).optional(),
+  price: z.number({ invalid_type_error: "Precio requerido" }).min(1, "Precio requerido"),
+  costPrice: z.number().min(0).optional(),
   barcode: z.string().optional(),
-  stock: z.coerce.number().int().min(0),
-  stockAlert: z.coerce.number().int().min(0),
+  stock: z.number({ invalid_type_error: "Stock requerido" }).int().min(0),
+  stockAlert: z.number().int().min(0),
   isActive: z.boolean(),
 });
 
@@ -141,6 +141,10 @@ export function ProductForm({
       tags: tagsArray,
       brandId: data.brandId || undefined,
       gender: data.gender || undefined,
+      variants: data.variants.map((v) => ({
+        ...v,
+        costPrice: Number.isNaN(v.costPrice) ? undefined : v.costPrice,
+      })),
     };
 
     const url = isEdit ? `/api/admin/productos/${product!.id}` : "/api/admin/productos";
@@ -324,20 +328,20 @@ export function ProductForm({
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-600">Precio venta *</label>
-                      <Input {...register(`variants.${i}.price`)} type="number" min="0" step="1" className="h-8 text-sm" />
+                      <Input {...register(`variants.${i}.price`, { valueAsNumber: true })} type="number" min="0" step="1" className="h-8 text-sm" />
                       {variantErrors?.price && <p className="text-xs text-red-500">{variantErrors.price.message}</p>}
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-600">Precio costo</label>
-                      <Input {...register(`variants.${i}.costPrice`)} type="number" min="0" step="1" className="h-8 text-sm" />
+                      <Input {...register(`variants.${i}.costPrice`, { valueAsNumber: true })} type="number" min="0" step="1" className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-600">Stock</label>
-                      <Input {...register(`variants.${i}.stock`)} type="number" min="0" className="h-8 text-sm" />
+                      <Input {...register(`variants.${i}.stock`, { valueAsNumber: true })} type="number" min="0" className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-600">Alerta stock</label>
-                      <Input {...register(`variants.${i}.stockAlert`)} type="number" min="0" className="h-8 text-sm" />
+                      <Input {...register(`variants.${i}.stockAlert`, { valueAsNumber: true })} type="number" min="0" className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-600">Código de barras</label>
