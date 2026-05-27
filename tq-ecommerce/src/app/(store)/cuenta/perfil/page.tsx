@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/store/profile-form";
+import { getLoyaltyStatus } from "@/lib/loyalty";
+import { TryClubCard } from "@/components/store/try-club-card";
+import { LoyaltyQR } from "@/components/store/loyalty-qr";
+import QRCode from "qrcode";
 
 export const metadata = { title: "Mis datos" };
 
@@ -27,6 +31,16 @@ export default async function PerfilPage() {
 
   if (!user) redirect("/login");
 
+  const loyalty = await getLoyaltyStatus(session.user.id);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tq-ecommerce.vercel.app";
+  const qrData = `${appUrl}/admin/clientes/${user.id}`;
+  const qrDataUrl = await QRCode.toDataURL(qrData, {
+    width: 220,
+    margin: 2,
+    color: { dark: "#3A3A3A", light: "#FFFFFF" },
+  });
+
   return (
     <div className="container mx-auto px-4 py-10 max-w-xl">
       <div className="flex items-center gap-2 mb-6">
@@ -39,7 +53,19 @@ export default async function PerfilPage() {
 
       <h1 className="text-2xl font-bold mb-6">Mis datos</h1>
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
+      {/* Try Club progress */}
+      <TryClubCard loyalty={loyalty} />
+
+      {/* QR para showroom */}
+      <LoyaltyQR
+        qrDataUrl={qrDataUrl}
+        customerName={user.name ?? "Cliente"}
+        qualifyingCount={loyalty.qualifyingCount}
+        nextMilestone={loyalty.nextMilestone}
+      />
+
+      {/* Datos personales */}
+      <div className="rounded-xl border bg-white p-6 shadow-sm mt-6">
         <ProfileForm user={user} />
       </div>
     </div>
