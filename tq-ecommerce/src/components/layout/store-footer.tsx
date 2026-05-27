@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Phone, Mail } from "lucide-react";
 
 export function StoreFooter() {
@@ -12,9 +13,7 @@ export function StoreFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="h-10 w-10 rounded-full bg-[#3A3A3A] border-2 border-[#F5C200] flex items-center justify-center shrink-0">
-                <span className="font-barlow font-bold text-[#F5C200] text-sm">TQ</span>
-              </div>
+              <Image src="/logo.png" alt="Tres Quartos" width={40} height={40} className="rounded-full shrink-0" />
               <div>
                 <p className="font-barlow font-bold text-white text-lg leading-none uppercase">Tres Quartos</p>
                 <p className="text-[10px] text-[#F5C200] font-light leading-none mt-0.5">Donde el rugby sigue vivo.</p>

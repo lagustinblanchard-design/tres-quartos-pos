@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingCart, Heart, User, Search, Menu, X, LogOut, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, useEffect } from "react";
@@ -45,9 +46,7 @@ export function StoreHeader() {
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="h-9 w-9 rounded-full bg-[#3A3A3A] border-2 border-[#F5C200] flex items-center justify-center shrink-0">
-              <span className="font-barlow font-bold text-[#F5C200] text-sm leading-none">TQ</span>
-            </div>
+            <Image src="/logo.png" alt="Tres Quartos" width={36} height={36} className="rounded-full shrink-0" />
             <div className="hidden sm:block">
               <p className="font-barlow font-bold text-[#3A3A3A] text-lg leading-none uppercase tracking-wide">
                 Tres Quartos
