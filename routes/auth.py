@@ -34,11 +34,9 @@ def login():
         if turno:
             session["turno_id"] = turno["id"]
 
-        db.close()
         return redirect(url_for("ventas.pos"))
 
     vendedores = db.execute("SELECT * FROM vendedores WHERE activo=1 ORDER BY nombre").fetchall()
-    db.close()
     return render_template("login.html", vendedores=vendedores)
 
 
@@ -52,7 +50,6 @@ def logout():
 def vendedores():
     db = get_db()
     lista = db.execute("SELECT * FROM vendedores ORDER BY nombre").fetchall()
-    db.close()
     return render_template("vendedores.html", vendedores=lista, active="vendedores")
 
 
@@ -66,7 +63,6 @@ def nuevo_vendedor():
     db = get_db()
     db.execute("INSERT INTO vendedores (nombre, pin) VALUES (%s, %s)", (nombre, pin or None))
     db.commit()
-    db.close()
     flash(f"Vendedor '{nombre}' creado.", "success")
     return redirect(url_for("auth.vendedores"))
 
@@ -78,5 +74,4 @@ def toggle_vendedor(vid):
     if v:
         db.execute("UPDATE vendedores SET activo=%s WHERE id=%s", (0 if v["activo"] else 1, vid))
         db.commit()
-    db.close()
     return redirect(url_for("auth.vendedores"))

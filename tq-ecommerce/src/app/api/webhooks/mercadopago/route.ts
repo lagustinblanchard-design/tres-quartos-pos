@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { mpPayment } from "@/lib/mercadopago";
 import crypto from "crypto";
 import { sendPaymentApprovedEmail } from "@/lib/email";
+import { processLoyaltyPurchase } from "@/lib/loyalty";
 
 // Verifica la firma del webhook para confirmar que viene de MercadoPago
 function verifySignature(req: NextRequest): boolean {
@@ -91,8 +92,9 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Si el pago fue aprobado, enviar email de confirmación
+  // Si el pago fue aprobado, procesar fidelidad y enviar email
   if (paymentStatus === "PAGADO") {
+    processLoyaltyPurchase(orderId).catch(() => {});
     const fullOrder = await prisma.order.findUnique({
       where: { id: orderId },
       include: {

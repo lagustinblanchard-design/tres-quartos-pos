@@ -1,12 +1,10 @@
+import binascii
+import io
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, Response
 from database import get_db
 from utils.helpers import fecha_ahora
-import io
 
 inventario_bp = Blueprint("inventario", __name__, url_prefix="/inventario")
-
-# Cache en memoria para datos del Excel entre paso 1 y paso 2
-_import_cache = {}
 
 
 def login_required(f):
@@ -43,7 +41,6 @@ def lista():
     sql += " ORDER BY p.nombre"
     productos = db.execute(sql, params).fetchall()
     categorias = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
-    db.close()
     return render_template("inventario/lista.html", productos=productos,
                            categorias=categorias, q=q, cat=cat, active="inventario")
 
@@ -83,12 +80,10 @@ def nuevo():
                 )
 
         db.commit()
-        db.close()
         flash(f"Producto '{nombre}' creado.", "success")
         return redirect(url_for("inventario.lista"))
 
     categorias = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
-    db.close()
     return render_template("inventario/producto.html", producto=None, variantes=[],
                            categorias=categorias, active="inventario")
 
@@ -131,13 +126,11 @@ def editar(pid):
                 )
 
         db.commit()
-        db.close()
         flash("Producto actualizado.", "success")
         return redirect(url_for("inventario.lista"))
 
     variantes = db.execute("SELECT * FROM variantes WHERE producto_id=%s ORDER BY talla, color", (pid,)).fetchall()
     categorias = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
-    db.close()
     return render_template("inventario/producto.html", producto=producto, variantes=variantes,
                            categorias=categorias, active="inventario")
 
@@ -148,7 +141,6 @@ def eliminar(pid):
     db = get_db()
     db.execute("UPDATE productos SET activo=0 WHERE id=%s", (pid,))
     db.commit()
-    db.close()
     flash("Producto desactivado.", "success")
     return redirect(url_for("inventario.lista"))
 
@@ -162,7 +154,6 @@ def ajuste():
         cantidad = int(request.form.get("cantidad", 0))
         db.execute("UPDATE variantes SET stock = stock + %s WHERE id=%s", (cantidad, variante_id))
         db.commit()
-        db.close()
         flash("Stock ajustado.", "success")
         return redirect(url_for("inventario.lista"))
 
@@ -172,7 +163,6 @@ def ajuste():
         WHERE p.activo=1
         ORDER BY p.nombre, v.talla, v.color
     """).fetchall()
-    db.close()
     return render_template("inventario/ajuste.html", variantes=variantes, active="inventario")
 
 
@@ -197,7 +187,7 @@ def importar():
                 datos_b64 = base64.b64encode(
                     json.dumps(rows, default=str).encode("utf-8")
                 ).decode("ascii")
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 error = str(e)
 
     return render_template("inventario/importar.html", preview=preview, cols=cols,
@@ -215,8 +205,8 @@ def importar_confirmar():
 
     try:
         rows = json.loads(base64.b64decode(datos_b64).decode("utf-8"))
-    except Exception:
-        flash("Error al leer los datos del archivo.", "danger")
+    except (json.JSONDecodeError, binascii.Error, UnicodeDecodeError) as e:
+        flash(f"Error al leer los datos del archivo: {e}", "danger")
         return redirect(url_for("inventario.importar"))
 
     col_nombre = request.form.get("col_nombre")
@@ -276,8 +266,16 @@ def importar_confirmar():
             f"INSERT INTO productos (nombre, sku, categoria_id, precio_costo, precio_venta) VALUES {placeholders} RETURNING id, nombre",
             params
         )
-        for r in result.fetchall():
-            prods_existentes[r["nombre"]] = r["id"]
+        fetched = result.fetchall()
+        if fetched:
+            for r in fetched:
+                prods_existentes[r["nombre"]] = r["id"]
+        else:
+            # SQLite: RETURNING multi-column stripped, fetch by name
+            names = [row[0] for row in nuevos_prods_uniq]
+            name_ph = ",".join(["%s"] * len(names))
+            for r in db.execute(f"SELECT id, nombre FROM productos WHERE nombre IN ({name_ph})", names).fetchall():
+                prods_existentes[r["nombre"]] = r["id"]
 
     # Actualizar precios de productos existentes si el precio importado es > 0
     prods_actualizar = list({n: (co, v) for n, s, c, co, v, *_ in filas_limpias
@@ -301,7 +299,6 @@ def importar_confirmar():
     importados = len(filas_limpias)
 
     db.commit()
-    db.close()
     flash(f"Se importaron {importados} productos.", "success")
     return redirect(url_for("inventario.lista"))
 
@@ -317,5 +314,4 @@ def categorias():
             db.commit()
             flash("Categoría creada.", "success")
     cats = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
-    db.close()
     return render_template("inventario/categorias.html", categorias=cats, active="inventario")

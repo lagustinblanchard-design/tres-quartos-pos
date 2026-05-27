@@ -4,6 +4,7 @@ import { mpPreference } from "@/lib/mercadopago";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { sendOrderConfirmation } from "@/lib/email";
+import { validateCoupon, redeemCoupon, processLoyaltyPurchase } from "@/lib/loyalty";
 
 const checkoutSchema = z.object({
   items: z
@@ -29,6 +30,7 @@ const checkoutSchema = z.object({
     "TRANSFERENCIA",
   ]),
   guestName: z.string().optional(),
+  couponCode: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { items, shipping, paymentMethod, guestName } = parsed.data;
+  const { items, shipping, paymentMethod, guestName, couponCode } = parsed.data;
 
   // ── 1. Verificar stock de cada variante ────────────────────────────────────
   const variantIds = items.map((i) => i.variantId);
@@ -78,8 +80,21 @@ export async function POST(req: NextRequest) {
   });
 
   const subtotal = orderItems.reduce((acc, i) => acc + i.subtotal, 0);
-  const shippingCost = subtotal >= 50000 ? 0 : 2500; // Lógica simple, mejorar con ShippingZone
-  const total = subtotal + shippingCost;
+  const shippingCost = subtotal >= 50000 ? 0 : 2500;
+
+  // Validar cupón Try Club
+  let couponDiscount = 0;
+  let validatedCoupon: { id: string; code: string; discountPct: number } | null = null;
+  if (couponCode && session?.user?.id) {
+    const couponResult = await validateCoupon(couponCode.trim().toUpperCase(), session.user.id);
+    if (!couponResult.valid || !couponResult.coupon) {
+      return NextResponse.json({ error: couponResult.error ?? "Cupón inválido" }, { status: 400 });
+    }
+    validatedCoupon = couponResult.coupon as { id: string; code: string; discountPct: number };
+    couponDiscount = Math.round(subtotal * validatedCoupon.discountPct / 100);
+  }
+
+  const total = subtotal + shippingCost - couponDiscount;
 
   // ── 3. Crear la Order en DB (estado PENDIENTE) ─────────────────────────────
   const order = await prisma.$transaction(async (tx) => {
@@ -91,7 +106,7 @@ export async function POST(req: NextRequest) {
         guestEmail: session ? null : shipping.email,
         guestName: session ? null : (guestName ?? shipping.name),
         subtotal,
-        discount: 0,
+        discount: couponDiscount,
         shipping: shippingCost,
         total,
         paymentMethod: paymentMethod as "MERCADOPAGO" | "TRANSFERENCIA",
@@ -196,6 +211,9 @@ export async function POST(req: NextRequest) {
     where: { id: order.id },
     data: { status: "CONFIRMADO" },
   });
+
+  if (validatedCoupon) await redeemCoupon(validatedCoupon.code, order.id);
+  processLoyaltyPurchase(order.id).catch(() => {});
 
   // Email de confirmación para transferencia (fire-and-forget)
   sendOrderConfirmation({

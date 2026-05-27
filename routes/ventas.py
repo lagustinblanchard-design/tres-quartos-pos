@@ -1,3 +1,4 @@
+from collections import defaultdict
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database import get_db
 from utils.helpers import fecha_ahora
@@ -20,7 +21,6 @@ def login_required(f):
 def pos():
     db = get_db()
     categorias = db.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
-    db.close()
     return render_template("ventas/pos.html", categorias=categorias, active="pos")
 
 
@@ -48,20 +48,25 @@ def api_productos():
     productos = db.execute(sql, params).fetchall()
 
     resultado = []
-    for p in productos:
-        variantes = db.execute(
-            "SELECT id, talla, color, stock FROM variantes WHERE producto_id=%s ORDER BY talla, color",
-            (p["id"],)
+    if productos:
+        prod_ids = [p["id"] for p in productos]
+        placeholders = ",".join(["%s"] * len(prod_ids))
+        todas_variantes = db.execute(
+            f"SELECT id, producto_id, talla, color, stock FROM variantes WHERE producto_id IN ({placeholders}) ORDER BY producto_id, talla, color",
+            prod_ids
         ).fetchall()
-        resultado.append({
-            "id": p["id"],
-            "nombre": p["nombre"],
-            "sku": p["sku"],
-            "precio_venta": p["precio_venta"],
-            "categoria": p["categoria"],
-            "variantes": [dict(v) for v in variantes],
-        })
-    db.close()
+        variantes_by_prod = defaultdict(list)
+        for v in todas_variantes:
+            variantes_by_prod[v["producto_id"]].append(dict(v))
+        for p in productos:
+            resultado.append({
+                "id": p["id"],
+                "nombre": p["nombre"],
+                "sku": p["sku"],
+                "precio_venta": p["precio_venta"],
+                "categoria": p["categoria"],
+                "variantes": variantes_by_prod[p["id"]],
+            })
     return jsonify(resultado)
 
 
@@ -73,7 +78,6 @@ def api_variante(vid):
         "SELECT v.*, p.nombre as producto_nombre, p.precio_venta FROM variantes v JOIN productos p ON p.id=v.producto_id WHERE v.id=%s",
         (vid,)
     ).fetchone()
-    db.close()
     if not v:
         return jsonify({"error": "no encontrado"}), 404
     return jsonify(dict(v))
@@ -123,7 +127,6 @@ def cobrar():
             db.execute("UPDATE variantes SET stock = stock - %s WHERE id=%s", (qty, vid))
 
     db.commit()
-
     items_ticket = db.execute("""
         SELECT iv.cantidad, iv.precio_unitario, iv.descuento, iv.subtotal,
                COALESCE(p.nombre, '—') as nombre,
@@ -134,8 +137,6 @@ def cobrar():
         LEFT JOIN productos p ON p.id = v.producto_id
         WHERE iv.venta_id = %s
     """, (venta_id,)).fetchall()
-
-    db.close()
 
     ticket = {
         "venta_id": venta_id,
@@ -170,7 +171,6 @@ def historial():
         params.append(fecha_hasta + " 23:59:59")
     sql += " ORDER BY v.id DESC LIMIT 200"
     ventas = db.execute(sql, params).fetchall()
-    db.close()
     return render_template("ventas/historial.html", ventas=ventas,
                            fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, active="historial")
 
@@ -192,7 +192,6 @@ def detalle(vid):
         LEFT JOIN productos p ON p.id = va.producto_id
         WHERE iv.venta_id = %s
     """, (vid,)).fetchall()
-    db.close()
     if not venta:
         flash("Venta no encontrada.", "danger")
         return redirect(url_for("ventas.historial"))

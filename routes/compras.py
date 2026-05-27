@@ -26,7 +26,6 @@ def lista():
         LEFT JOIN vendedores v ON v.id = c.vendedor_id
         ORDER BY c.id DESC LIMIT 100
     """).fetchall()
-    db.close()
     return render_template("compras/lista.html", compras=compras, active="compras")
 
 
@@ -35,7 +34,6 @@ def lista():
 def proveedores():
     db = get_db()
     lista = db.execute("SELECT * FROM proveedores WHERE activo=1 ORDER BY nombre").fetchall()
-    db.close()
     return render_template("compras/proveedores.html", proveedores=lista, active="proveedores")
 
 
@@ -53,7 +51,6 @@ def nuevo_proveedor():
          request.form.get("email",""), request.form.get("notas",""))
     )
     db.commit()
-    db.close()
     flash(f"Proveedor '{nombre}' creado.", "success")
     return redirect(url_for("compras.proveedores"))
 
@@ -69,7 +66,6 @@ def editar_proveedor(pid):
          request.form.get("notas",""), pid)
     )
     db.commit()
-    db.close()
     flash("Proveedor actualizado.", "success")
     return redirect(url_for("compras.proveedores"))
 
@@ -111,7 +107,6 @@ def nueva():
                 (cid, vid, qty, precio, sub)
             )
         db.commit()
-        db.close()
         flash("Compra registrada.", "success")
         return redirect(url_for("compras.lista"))
 
@@ -122,7 +117,6 @@ def nueva():
         WHERE p.activo=1 ORDER BY p.nombre, v.talla, v.color
     """).fetchall()
     variantes_dict = [dict(v) for v in variantes]
-    db.close()
     return render_template("compras/nueva.html", proveedores=proveedores_lista,
                            variantes=variantes_dict, active="compras")
 
@@ -137,16 +131,27 @@ def recibir(cid):
         return redirect(url_for("compras.lista"))
 
     items = db.execute("SELECT * FROM items_compra WHERE compra_id=%s", (cid,)).fetchall()
-    for item in items:
-        db.execute("UPDATE variantes SET stock = stock + %s WHERE id=%s", (item["cantidad"], item["variante_id"]))
-        db.execute("""
-            UPDATE productos SET precio_costo=%s
-            WHERE id=(SELECT producto_id FROM variantes WHERE id=%s)
-        """, (item["precio_costo"], item["variante_id"]))
+    if items:
+        case_parts = " ".join("WHEN %s THEN stock + %s" for _ in items)
+        ids_placeholder = ",".join(["%s"] * len(items))
+        params_stock = []
+        for item in items:
+            params_stock += [item["variante_id"], item["cantidad"]]
+        params_stock += [item["variante_id"] for item in items]
+        db.execute(
+            f"UPDATE variantes SET stock = CASE id {case_parts} END WHERE id IN ({ids_placeholder})",
+            params_stock
+        )
+        prod_prices = {}
+        for item in items:
+            var = db.execute("SELECT producto_id FROM variantes WHERE id=%s", (item["variante_id"],)).fetchone()
+            if var:
+                prod_prices[var["producto_id"]] = item["precio_costo"]
+        for prod_id, precio in prod_prices.items():
+            db.execute("UPDATE productos SET precio_costo=%s WHERE id=%s", (precio, prod_id))
 
     db.execute("UPDATE compras SET estado='recibida' WHERE id=%s", (cid,))
     db.commit()
-    db.close()
     flash("Mercadería recibida. Stock actualizado.", "success")
     return redirect(url_for("compras.lista"))
 
@@ -169,5 +174,4 @@ def detalle(cid):
         JOIN productos p ON p.id=va.producto_id
         WHERE ic.compra_id=%s
     """, (cid,)).fetchall()
-    db.close()
     return render_template("compras/detalle.html", compra=compra, items=items)

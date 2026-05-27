@@ -2,7 +2,7 @@ import threading
 import webbrowser
 import os
 from flask import Flask, redirect, url_for, session
-from database import init_db
+from database import init_db, close_db
 from routes.auth import auth_bp
 from routes.ventas import ventas_bp
 from routes.inventario import inventario_bp
@@ -11,7 +11,12 @@ from routes.compras import compras_bp
 from routes.reportes import reportes_bp
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "tresquartos_secret_2024")
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    import warnings
+    warnings.warn("SECRET_KEY not set — using insecure fallback. Set SECRET_KEY in production.", RuntimeWarning)
+    _secret = "tresquartos_secret_2024"
+app.secret_key = _secret
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(ventas_bp)
@@ -19,6 +24,7 @@ app.register_blueprint(inventario_bp)
 app.register_blueprint(caja_bp)
 app.register_blueprint(compras_bp)
 app.register_blueprint(reportes_bp)
+app.teardown_appcontext(close_db)
 
 with app.app_context():
     init_db()
@@ -55,7 +61,6 @@ def open_browser():
 
 
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     if not os.environ.get("RENDER"):
         threading.Timer(1.0, open_browser).start()

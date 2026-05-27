@@ -53,7 +53,6 @@ def turno():
     turnos_hist = db.execute(
         "SELECT t.*, v.nombre as vendedor_nombre FROM turnos_caja t JOIN vendedores v ON v.id=t.vendedor_id WHERE t.estado='cerrado' ORDER BY t.id DESC LIMIT 10"
     ).fetchall()
-    db.close()
     return render_template("caja/turno.html", turno=turno_activo, resumen=resumen,
                            turnos_hist=turnos_hist, active="caja")
 
@@ -69,7 +68,6 @@ def abrir():
         (vid, fecha_ahora(), monto)
     ).lastrowid
     db.commit()
-    db.close()
     session["turno_id"] = turno_id
     flash("Turno abierto correctamente.", "success")
     return redirect(url_for("caja.turno"))
@@ -89,7 +87,6 @@ def cerrar():
         (fecha_ahora(), monto_final, tid)
     )
     db.commit()
-    db.close()
     session.pop("turno_id", None)
     flash("Turno cerrado.", "success")
     return redirect(url_for("caja.turno"))
@@ -106,7 +103,6 @@ def movimientos():
             "SELECT * FROM movimientos_caja WHERE turno_id=%s ORDER BY id DESC",
             (tid,)
         ).fetchall()
-    db.close()
     return render_template("caja/movimientos.html", movimientos=movs, active="movimientos")
 
 
@@ -129,6 +125,5 @@ def nuevo_movimiento():
         (tid, tipo, concepto, monto, fecha_ahora())
     )
     db.commit()
-    db.close()
     flash("Movimiento registrado.", "success")
     return redirect(url_for("caja.movimientos"))

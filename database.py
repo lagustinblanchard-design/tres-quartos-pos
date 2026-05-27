@@ -1,6 +1,7 @@
 import os
 import re
 import sqlite3
+from flask import g
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "pos.db")
@@ -18,7 +19,7 @@ class DbCursor:
         if not self._is_pg:
             sql = sql.replace("%s", "?")
             sql = re.sub(r'\bILIKE\b', 'LIKE', sql, flags=re.IGNORECASE)
-            sql = re.sub(r'\s+RETURNING\s+id\s*$', '', sql, flags=re.IGNORECASE).strip()
+            sql = re.sub(r'\s+RETURNING\s+\S.*$', '', sql, flags=re.IGNORECASE).strip()
         return sql
 
     def execute(self, sql, params=()):
@@ -75,7 +76,15 @@ class DbConnection:
 
 
 def get_db():
-    return DbConnection()
+    if "db" not in g:
+        g.db = DbConnection()
+    return g.db
+
+
+def close_db(e=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
 
 
 _SQLITE_SCHEMA = """
@@ -282,19 +291,19 @@ _PG_SCHEMA = [
 
 
 def init_db():
-    db = get_db()
+    db = DbConnection()
+    try:
+        if db._is_pg:
+            for stmt in _PG_SCHEMA:
+                db.execute(stmt)
+            db.commit()
+        else:
+            db._conn.executescript(_SQLITE_SCHEMA)
 
-    if db._is_pg:
-        for stmt in _PG_SCHEMA:
-            db.execute(stmt)
-        db.commit()
-    else:
-        db._conn.executescript(_SQLITE_SCHEMA)
-
-    cnt = db.execute("SELECT COUNT(*) as cnt FROM categorias").fetchone()["cnt"]
-    if int(cnt) == 0:
-        for nombre in ["Hombre", "Mujer", "Niños", "Accesorios"]:
-            db.execute("INSERT INTO categorias (nombre) VALUES (%s)", (nombre,))
-        db.commit()
-
-    db.close()
+        cnt = db.execute("SELECT COUNT(*) as cnt FROM categorias").fetchone()["cnt"]
+        if int(cnt) == 0:
+            for nombre in ["Hombre", "Mujer", "Niños", "Accesorios"]:
+                db.execute("INSERT INTO categorias (nombre) VALUES (%s)", (nombre,))
+            db.commit()
+    finally:
+        db.close()

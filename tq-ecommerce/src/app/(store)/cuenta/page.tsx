@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Package, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/store/sign-out-button";
+import { getLoyaltyStatus } from "@/lib/loyalty";
+import { TryClubCard } from "@/components/store/try-club-card";
 
 export const metadata = { title: "Mi cuenta" };
 
@@ -57,6 +59,8 @@ export default async function CuentaPage() {
 
   if (!user) redirect("/login");
 
+  const loyalty = await getLoyaltyStatus(session.user.id);
+
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
       <h1 className="text-2xl font-bold mb-8">Mi cuenta</h1>
@@ -82,6 +86,9 @@ export default async function CuentaPage() {
           <SignOutButton />
         </div>
       </div>
+
+      {/* Try Club */}
+      <TryClubCard loyalty={loyalty} />
 
       {/* Recent orders */}
       <div className="rounded-xl border bg-white shadow-sm">

@@ -49,7 +49,6 @@ def dashboard():
         ORDER BY v.stock ASC LIMIT 10
     """).fetchall()
 
-    db.close()
     return render_template("reportes/dashboard.html",
                            ventas_hoy=ventas_hoy,
                            metodos=metodos,
@@ -95,7 +94,6 @@ def ventas_reporte():
         GROUP BY p.id ORDER BY total_vendido DESC LIMIT 10
     """, (fecha_desde + " 00:00:00", fecha_hasta + " 23:59:59")).fetchall()
 
-    db.close()
     return render_template("reportes/ventas.html",
                            ventas=ventas, totales=totales,
                            por_metodo=por_metodo,
@@ -127,7 +125,6 @@ def stock():
         "valor_venta": sum(p["valor_venta"] for p in productos),
         "stock_total": sum(p["stock_total"] for p in productos),
     }
-    db.close()
     return render_template("reportes/stock.html", productos=productos,
                            totales=totales, active="reportes")
 
@@ -148,7 +145,6 @@ def exportar_ventas():
         WHERE v.fecha BETWEEN %s AND %s AND v.estado='completada'
         ORDER BY v.fecha DESC
     """, (fecha_desde + " 00:00:00", fecha_hasta + " 23:59:59")).fetchall()
-    db.close()
 
     df = pd.DataFrame([dict(r) for r in rows])
     buf = io.BytesIO()
@@ -178,7 +174,6 @@ def exportar_stock():
         LEFT JOIN (SELECT producto_id, SUM(stock) as stock_total FROM variantes GROUP BY producto_id) vs ON vs.producto_id=p.id
         WHERE p.activo=1 ORDER BY p.nombre
     """).fetchall()
-    db.close()
     df = pd.DataFrame([dict(r) for r in rows])
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
