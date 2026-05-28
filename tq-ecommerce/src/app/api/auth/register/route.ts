@@ -13,7 +13,35 @@ const registerSchema = z.object({
     .regex(/[0-9]/, "Debe contener al menos un número"),
 });
 
+// Module-level rate limit — best effort for serverless (resets on cold start)
+// Provides friction against rapid bot attacks within a single function instance
+const ipAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipAttempts.set(ip, { count: 1, resetAt: now + 3_600_000 });
+    return true;
+  }
+  if (entry.count >= 5) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: { email: ["Demasiados intentos. Intentá de nuevo en una hora."] } },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json();
   const parsed = registerSchema.safeParse(body);
 

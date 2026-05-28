@@ -8,7 +8,10 @@ import { processLoyaltyPurchase } from "@/lib/loyalty";
 // Verifica la firma del webhook para confirmar que viene de MercadoPago
 function verifySignature(req: NextRequest): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) return true; // En dev sin secret, dejar pasar
+  if (!secret) {
+    console.error("[webhook] MP_WEBHOOK_SECRET no configurado — rechazando request");
+    return false;
+  }
 
   const xSignature = req.headers.get("x-signature") ?? "";
   const xRequestId = req.headers.get("x-request-id") ?? "";

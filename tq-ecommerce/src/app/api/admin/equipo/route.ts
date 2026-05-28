@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   }
 
   const { userId, role } = await req.json();
-  if (!userId || !["ADMIN", "CLIENTE"].includes(role)) {
+  if (!userId || typeof userId !== "string" || !["ADMIN", "VENDEDOR", "CLIENTE"].includes(role)) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
