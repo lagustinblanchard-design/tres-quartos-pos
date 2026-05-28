@@ -122,15 +122,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function ImagePreview({ url }: { url: string }) {
-  if (!url) return null;
-  return (
-    <div className="mt-2 rounded-lg overflow-hidden border aspect-video max-w-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
-    </div>
-  );
-}
 
 function VideoPreview({ url }: { url: string }) {
   const embed = youtubeEmbed(url);
