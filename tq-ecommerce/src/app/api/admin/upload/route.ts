@@ -19,9 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Máximo 10 MB" }, { status: 400 });
   }
 
-  const blob = await put(`diseno/${Date.now()}-${file.name}`, file, {
-    access: "public",
-  });
-
-  return NextResponse.json({ url: blob.url });
+  try {
+    const blob = await put(`diseno/${Date.now()}-${file.name}`, file, {
+      access: "public",
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err) {
+    console.error("Blob upload error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

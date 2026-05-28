@@ -146,11 +146,13 @@ function DropZone({ value, onChange }: { value: string; onChange: (url: string) 
     form.append("file", file);
     try {
       const res = await fetch("/api/admin/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (res.ok) onChange(data.url);
-      else setUploadError(data.error ?? "Error al subir");
-    } catch {
-      setUploadError("Error de conexión");
+      const text = await res.text();
+      let data: { url?: string; error?: string } = {};
+      try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
+      if (res.ok && data.url) onChange(data.url);
+      else setUploadError(data.error ?? `Error ${res.status}`);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Error de red");
     }
     setUploading(false);
   }
