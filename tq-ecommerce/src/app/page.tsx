@@ -43,7 +43,7 @@ export default async function HomePage() {
   const cfg = Object.fromEntries(configs.map((c) => [c.key, JSON.parse(c.value)]));
 
   const hero = cfg.homepage_hero ?? {};
-  const banners: Array<{ id: string; isActive: boolean; image_url: string; video_url: string; title: string; subtitle: string; btn_text: string; btn_link: string }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
+  const banners: Array<{ id: string; isActive: boolean; image_url: string; video_url: string; title: string; subtitle: string; btn_text: string; btn_link: string; btn_bg: string; btn_color: string }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
   const cta = cfg.homepage_cta ?? {};
 
   const heroTitle = hero.title ?? "Donde el rugby sigue vivo.";
@@ -53,12 +53,18 @@ export default async function HomePage() {
   const heroBtn1Link = hero.btn1_link ?? "/catalogo";
   const heroBtn2Text = hero.btn2_text ?? "Solo rugby";
   const heroBtn2Link = hero.btn2_link ?? "/catalogo?cat=rugby";
+  const heroBtn1Bg = hero.btn1_bg ?? "#F5C200";
+  const heroBtn1Color = hero.btn1_color ?? "#3A3A3A";
+  const heroBtn2Bg = hero.btn2_bg ?? "transparent";
+  const heroBtn2Color = hero.btn2_color ?? "#FFFFFF";
   const heroImageUrl = hero.image_url ?? "";
 
   const ctaTitle = cta.title ?? "Precios especiales para pedidos en cantidad";
   const ctaSubtitle = cta.subtitle ?? "Camisetas con número, equipamiento completo. Consultá sin compromiso.";
   const ctaBtnText = cta.btn_text ?? "Consultar por WhatsApp";
   const ctaBtnLink = cta.btn_link ?? "https://wa.me/5493794339447";
+  const ctaBtnBg = cta.btn_bg ?? "#3A3A3A";
+  const ctaBtnColor = cta.btn_color ?? "#FFFFFF";
 
   return (
     <CartProvider>
@@ -104,13 +110,13 @@ export default async function HomePage() {
                   </h1>
                   <p className="text-gray-300 text-lg mb-8 leading-relaxed">{heroSubtitle}</p>
                   <div className="flex flex-wrap gap-4">
-                    <Button size="lg" className="bg-[#F5C200] text-[#3A3A3A] hover:bg-[#F5C200]/90 font-barlow font-bold uppercase tracking-wide text-base" asChild>
+                    <Button size="lg" className="font-barlow font-bold uppercase tracking-wide text-base" style={{ background: heroBtn1Bg, color: heroBtn1Color }} asChild>
                       <Link href={heroBtn1Link}>
                         {heroBtn1Text} <ArrowRight className="ml-2 h-5 w-5" />
                       </Link>
                     </Button>
                     {heroBtn2Text && (
-                      <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 font-semibold" asChild>
+                      <Button size="lg" variant="outline" className="font-semibold" style={{ background: heroBtn2Bg, color: heroBtn2Color, borderColor: heroBtn2Color }} asChild>
                         <Link href={heroBtn2Link}>{heroBtn2Text}</Link>
                       </Button>
                     )}
@@ -206,7 +212,7 @@ export default async function HomePage() {
                           {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
                           {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
                           {banner.btn_text && banner.btn_link && (
-                            <Link href={banner.btn_link} className="inline-block mt-3 bg-[#F5C200] text-[#3A3A3A] font-bold text-sm px-4 py-2 rounded-lg hover:bg-[#F5C200]/90 transition-colors">
+                            <Link href={banner.btn_link} className="inline-block mt-3 font-bold text-sm px-4 py-2 rounded-lg transition-colors" style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}>
                               {banner.btn_text}
                             </Link>
                           )}
@@ -245,7 +251,7 @@ export default async function HomePage() {
                   {ctaTitle}
                 </h2>
                 <p className="text-[#3A3A3A]/70 text-lg mb-8">{ctaSubtitle}</p>
-                <Button size="lg" className="bg-[#3A3A3A] text-white hover:bg-black font-barlow font-bold uppercase tracking-wide text-base" asChild>
+                <Button size="lg" className="font-barlow font-bold uppercase tracking-wide text-base" style={{ background: ctaBtnBg, color: ctaBtnColor }} asChild>
                   <a href={ctaBtnLink} target="_blank" rel="noopener noreferrer">
                     {ctaBtnText}
                   </a>

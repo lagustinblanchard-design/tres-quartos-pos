@@ -11,8 +11,12 @@ export type HeroConfig = {
   subtitle: string;
   btn1_text: string;
   btn1_link: string;
+  btn1_bg: string;
+  btn1_color: string;
   btn2_text: string;
   btn2_link: string;
+  btn2_bg: string;
+  btn2_color: string;
   image_url: string;
 };
 
@@ -25,6 +29,8 @@ export type Banner = {
   subtitle: string;
   btn_text: string;
   btn_link: string;
+  btn_bg: string;
+  btn_color: string;
 };
 
 export type CtaConfig = {
@@ -32,6 +38,8 @@ export type CtaConfig = {
   subtitle: string;
   btn_text: string;
   btn_link: string;
+  btn_bg: string;
+  btn_color: string;
 };
 
 const DEFAULT_HERO: HeroConfig = {
@@ -40,8 +48,12 @@ const DEFAULT_HERO: HeroConfig = {
   subtitle: "Equipate bien. Pagá menos. Del vestuario a tu equipo — botines, camisetas y todo lo que necesitás para jugar.",
   btn1_text: "Ver catálogo",
   btn1_link: "/catalogo",
+  btn1_bg: "#F5C200",
+  btn1_color: "#3A3A3A",
   btn2_text: "Solo rugby",
   btn2_link: "/catalogo?cat=rugby",
+  btn2_bg: "transparent",
+  btn2_color: "#FFFFFF",
   image_url: "",
 };
 
@@ -50,12 +62,37 @@ const DEFAULT_CTA: CtaConfig = {
   subtitle: "Camisetas con número, equipamiento completo. Consultá sin compromiso.",
   btn_text: "Consultar por WhatsApp",
   btn_link: "https://wa.me/5493794339447",
+  btn_bg: "#3A3A3A",
+  btn_color: "#FFFFFF",
 };
 
 function youtubeEmbed(url: string): string {
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/);
   if (match) return `https://www.youtube.com/embed/${match[1]}`;
   return url;
+}
+
+function ColorPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const isTransparent = value === "transparent" || value === "";
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-gray-600">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={isTransparent ? "#ffffff" : value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8 w-10 rounded border cursor-pointer p-0.5"
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#F5C200 o transparent"
+          className="h-8 text-sm font-mono"
+        />
+      </div>
+    </div>
+  );
 }
 
 function Section({ title, icon, children, defaultOpen = true }: {
@@ -133,6 +170,7 @@ export function DisenoForm({ initial }: {
     setBanners((prev) => [...prev, {
       id: crypto.randomUUID(), isActive: true,
       image_url: "", video_url: "", title: "", subtitle: "", btn_text: "", btn_link: "",
+      btn_bg: "#F5C200", btn_color: "#3A3A3A",
     }]);
   }
 
@@ -174,19 +212,48 @@ export function DisenoForm({ initial }: {
             className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Botón principal — Texto">
-            <Input value={hero.btn1_text} onChange={(e) => setHero({ ...hero, btn1_text: e.target.value })} placeholder="Ver catálogo" />
-          </Field>
-          <Field label="Botón principal — Link">
-            <Input value={hero.btn1_link} onChange={(e) => setHero({ ...hero, btn1_link: e.target.value })} placeholder="/catalogo" />
-          </Field>
-          <Field label="Botón secundario — Texto">
-            <Input value={hero.btn2_text} onChange={(e) => setHero({ ...hero, btn2_text: e.target.value })} placeholder="Solo rugby" />
-          </Field>
-          <Field label="Botón secundario — Link">
-            <Input value={hero.btn2_link} onChange={(e) => setHero({ ...hero, btn2_link: e.target.value })} placeholder="/catalogo?cat=rugby" />
-          </Field>
+        <div className="rounded-lg border p-4 space-y-3 bg-gray-50">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Botón principal</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Texto">
+              <Input value={hero.btn1_text} onChange={(e) => setHero({ ...hero, btn1_text: e.target.value })} placeholder="Ver catálogo" />
+            </Field>
+            <Field label="Link">
+              <Input value={hero.btn1_link} onChange={(e) => setHero({ ...hero, btn1_link: e.target.value })} placeholder="/catalogo" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ColorPicker label="Color de fondo" value={hero.btn1_bg ?? "#F5C200"} onChange={(v) => setHero({ ...hero, btn1_bg: v })} />
+            <ColorPicker label="Color de texto" value={hero.btn1_color ?? "#3A3A3A"} onChange={(v) => setHero({ ...hero, btn1_color: v })} />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs text-gray-500">Vista previa:</span>
+            <span className="px-4 py-1.5 rounded-lg text-sm font-bold" style={{ background: hero.btn1_bg || "#F5C200", color: hero.btn1_color || "#3A3A3A" }}>
+              {hero.btn1_text || "Botón"}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-lg border p-4 space-y-3 bg-gray-50">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Botón secundario</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Texto">
+              <Input value={hero.btn2_text} onChange={(e) => setHero({ ...hero, btn2_text: e.target.value })} placeholder="Solo rugby" />
+            </Field>
+            <Field label="Link">
+              <Input value={hero.btn2_link} onChange={(e) => setHero({ ...hero, btn2_link: e.target.value })} placeholder="/catalogo?cat=rugby" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ColorPicker label="Color de fondo" value={hero.btn2_bg ?? "transparent"} onChange={(v) => setHero({ ...hero, btn2_bg: v })} />
+            <ColorPicker label="Color de texto" value={hero.btn2_color ?? "#FFFFFF"} onChange={(v) => setHero({ ...hero, btn2_color: v })} />
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs text-gray-500">Vista previa:</span>
+            <span className="px-4 py-1.5 rounded-lg text-sm font-bold border border-current" style={{ background: hero.btn2_bg || "transparent", color: hero.btn2_color || "#FFFFFF" }}>
+              {hero.btn2_text || "Botón"}
+            </span>
+          </div>
         </div>
         <Field label="Imagen de fondo" hint="Pegá la URL de una imagen (JPG, PNG, WebP). Dejá vacío para usar el fondo con patrón.">
           <Input value={hero.image_url} onChange={(e) => setHero({ ...hero, image_url: e.target.value })} placeholder="https://..." />
@@ -232,7 +299,17 @@ export function DisenoForm({ initial }: {
               <Field label="Botón — Link">
                 <Input value={banner.btn_link} onChange={(e) => updateBanner(banner.id, { btn_link: e.target.value })} placeholder="/catalogo" />
               </Field>
+              <ColorPicker label="Botón — Fondo" value={banner.btn_bg ?? "#F5C200"} onChange={(v) => updateBanner(banner.id, { btn_bg: v })} />
+              <ColorPicker label="Botón — Texto" value={banner.btn_color ?? "#3A3A3A"} onChange={(v) => updateBanner(banner.id, { btn_color: v })} />
             </div>
+            {banner.btn_text && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-gray-500">Vista previa:</span>
+                <span className="px-3 py-1 rounded-lg text-sm font-bold" style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}>
+                  {banner.btn_text}
+                </span>
+              </div>
+            )}
           </div>
         ))}
         <Button type="button" variant="outline" onClick={addBanner} className="w-full">
@@ -265,7 +342,17 @@ export function DisenoForm({ initial }: {
           <Field label="Botón — Link">
             <Input value={cta.btn_link} onChange={(e) => setCta({ ...cta, btn_link: e.target.value })} placeholder="https://wa.me/..." />
           </Field>
+          <ColorPicker label="Botón — Fondo" value={cta.btn_bg ?? "#3A3A3A"} onChange={(v) => setCta({ ...cta, btn_bg: v })} />
+          <ColorPicker label="Botón — Texto" value={cta.btn_color ?? "#FFFFFF"} onChange={(v) => setCta({ ...cta, btn_color: v })} />
         </div>
+        {cta.btn_text && (
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-xs text-gray-500">Vista previa:</span>
+            <span className="px-4 py-1.5 rounded-lg text-sm font-bold" style={{ background: cta.btn_bg || "#3A3A3A", color: cta.btn_color || "#FFFFFF" }}>
+              {cta.btn_text}
+            </span>
+          </div>
+        )}
       </Section>
 
       <Button onClick={save} disabled={saving} size="lg" className="w-full">
