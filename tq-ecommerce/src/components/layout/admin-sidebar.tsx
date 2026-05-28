@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronRight,
   UserCog,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/admin/facturacion", label: "Facturación", icon: FileText },
   { href: "/admin/clientes", label: "Clientes", icon: Users },
   { href: "/admin/reportes", label: "Reportes", icon: BarChart2 },
+  { href: "/admin/diseno", label: "Diseño", icon: Palette },
   { href: "/admin/equipo", label: "Equipo", icon: UserCog },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];

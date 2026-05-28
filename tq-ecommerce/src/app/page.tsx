@@ -5,6 +5,9 @@ import { StoreHeader } from "@/components/layout/store-header";
 import { StoreFooter } from "@/components/layout/store-footer";
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawer } from "@/components/store/cart-drawer";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 const categories = [
   { name: "Rugby", slug: "rugby", emoji: "🏉", desc: "Botines, camisetas, protecciones" },
@@ -27,46 +30,90 @@ const values = [
   { label: "Pasión", desc: "Amamos el deporte. Se nota." },
 ];
 
-export default function HomePage() {
+function youtubeEmbed(url: string): string {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return url;
+}
+
+export default async function HomePage() {
+  const configs = await prisma.businessConfig.findMany({
+    where: { key: { in: ["homepage_hero", "homepage_banners", "homepage_cta"] } },
+  });
+  const cfg = Object.fromEntries(configs.map((c) => [c.key, JSON.parse(c.value)]));
+
+  const hero = cfg.homepage_hero ?? {};
+  const banners: Array<{ id: string; isActive: boolean; image_url: string; video_url: string; title: string; subtitle: string; btn_text: string; btn_link: string }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
+  const cta = cfg.homepage_cta ?? {};
+
+  const heroTitle = hero.title ?? "Donde el rugby sigue vivo.";
+  const heroSubtitle = hero.subtitle ?? "Equipate bien. Pagá menos. Del vestuario a tu equipo — botines, camisetas y todo lo que necesitás para jugar.";
+  const heroBadge = hero.badge ?? "Nueva colección 2026";
+  const heroBtn1Text = hero.btn1_text ?? "Ver catálogo";
+  const heroBtn1Link = hero.btn1_link ?? "/catalogo";
+  const heroBtn2Text = hero.btn2_text ?? "Solo rugby";
+  const heroBtn2Link = hero.btn2_link ?? "/catalogo?cat=rugby";
+  const heroImageUrl = hero.image_url ?? "";
+
+  const ctaTitle = cta.title ?? "Precios especiales para pedidos en cantidad";
+  const ctaSubtitle = cta.subtitle ?? "Camisetas con número, equipamiento completo. Consultá sin compromiso.";
+  const ctaBtnText = cta.btn_text ?? "Consultar por WhatsApp";
+  const ctaBtnLink = cta.btn_link ?? "https://wa.me/5493794339447";
+
   return (
     <CartProvider>
       <div className="min-h-screen flex flex-col">
         <StoreHeader />
         <main className="flex-1">
           <div>
-            {/* Hero — Carbón TQ con acento amarillo */}
-            <section className="relative bg-[#3A3A3A] text-white overflow-hidden">
-              <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0" style={{
-                  backgroundImage: "repeating-linear-gradient(45deg, #F5C200 0px, #F5C200 1px, transparent 0px, transparent 50%)",
-                  backgroundSize: "20px 20px",
-                }} />
-              </div>
+            {/* Hero */}
+            <section
+              className="relative bg-[#3A3A3A] text-white overflow-hidden"
+              style={heroImageUrl ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
+            >
+              {/* overlay when image is set */}
+              {heroImageUrl && <div className="absolute inset-0 bg-[#3A3A3A]/70" />}
+
+              {/* pattern when no image */}
+              {!heroImageUrl && (
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute inset-0" style={{
+                    backgroundImage: "repeating-linear-gradient(45deg, #F5C200 0px, #F5C200 1px, transparent 0px, transparent 50%)",
+                    backgroundSize: "20px 20px",
+                  }} />
+                </div>
+              )}
 
               <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
                 <div className="max-w-2xl">
                   <div className="inline-flex items-center gap-2 rounded-full bg-[#F5C200]/20 border border-[#F5C200]/40 px-4 py-1.5 mb-6">
                     <span className="text-[#F5C200] text-xs font-barlow font-semibold uppercase tracking-widest">
-                      Nueva colección 2026
+                      {heroBadge}
                     </span>
                   </div>
                   <h1 className="font-barlow font-bold text-5xl md:text-7xl mb-4 leading-none uppercase tracking-tight">
-                    Donde el rugby
-                    <br />
-                    <span className="text-[#F5C200]">sigue vivo.</span>
+                    {heroTitle.includes("sigue vivo") ? (
+                      <>
+                        Donde el rugby
+                        <br />
+                        <span className="text-[#F5C200]">sigue vivo.</span>
+                      </>
+                    ) : (
+                      heroTitle
+                    )}
                   </h1>
-                  <p className="text-gray-300 text-lg mb-8 leading-relaxed">
-                    Equipate bien. Pagá menos. Del vestuario a tu equipo — botines, camisetas y todo lo que necesitás para jugar.
-                  </p>
+                  <p className="text-gray-300 text-lg mb-8 leading-relaxed">{heroSubtitle}</p>
                   <div className="flex flex-wrap gap-4">
                     <Button size="lg" className="bg-[#F5C200] text-[#3A3A3A] hover:bg-[#F5C200]/90 font-barlow font-bold uppercase tracking-wide text-base" asChild>
-                      <Link href="/catalogo">
-                        Ver catálogo <ArrowRight className="ml-2 h-5 w-5" />
+                      <Link href={heroBtn1Link}>
+                        {heroBtn1Text} <ArrowRight className="ml-2 h-5 w-5" />
                       </Link>
                     </Button>
-                    <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 font-semibold" asChild>
-                      <Link href="/catalogo?cat=rugby">Solo rugby</Link>
-                    </Button>
+                    {heroBtn2Text && (
+                      <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 font-semibold" asChild>
+                        <Link href={heroBtn2Link}>{heroBtn2Text}</Link>
+                      </Button>
+                    )}
                   </div>
 
                   <div className="flex gap-8 mt-12 pt-8 border-t border-white/10">
@@ -133,7 +180,45 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* Values section */}
+            {/* Dynamic banners */}
+            {banners.length > 0 && (
+              <section className="container mx-auto px-4 pb-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {banners.map((banner) => (
+                    <div key={banner.id} className="rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white">
+                      {banner.video_url ? (
+                        <div className="aspect-video">
+                          <iframe
+                            src={youtubeEmbed(banner.video_url)}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; encrypted-media"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : banner.image_url ? (
+                        <div className="aspect-video overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : null}
+                      {(banner.title || banner.btn_text) && (
+                        <div className="p-5">
+                          {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
+                          {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
+                          {banner.btn_text && banner.btn_link && (
+                            <Link href={banner.btn_link} className="inline-block mt-3 bg-[#F5C200] text-[#3A3A3A] font-bold text-sm px-4 py-2 rounded-lg hover:bg-[#F5C200]/90 transition-colors">
+                              {banner.btn_text}
+                            </Link>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Values */}
             <section className="bg-[#F0F0F0] py-16">
               <div className="container mx-auto px-4">
                 <div className="text-center mb-10">
@@ -152,20 +237,17 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* CTA Banner */}
+            {/* CTA */}
             <section className="bg-[#F5C200] py-16">
               <div className="container mx-auto px-4 text-center">
                 <p className="font-barlow font-semibold text-[#3A3A3A]/70 uppercase tracking-widest text-sm mb-2">¿Tenés un club o equipo?</p>
-                <h2 className="font-barlow font-bold text-4xl md:text-5xl text-[#3A3A3A] uppercase mb-4">
-                  Precios especiales
-                  <br />para pedidos en cantidad
+                <h2 className="font-barlow font-bold text-4xl md:text-5xl text-[#3A3A3A] uppercase mb-4 whitespace-pre-line">
+                  {ctaTitle}
                 </h2>
-                <p className="text-[#3A3A3A]/70 text-lg mb-8">
-                  Camisetas con número, equipamiento completo. Consultá sin compromiso.
-                </p>
+                <p className="text-[#3A3A3A]/70 text-lg mb-8">{ctaSubtitle}</p>
                 <Button size="lg" className="bg-[#3A3A3A] text-white hover:bg-black font-barlow font-bold uppercase tracking-wide text-base" asChild>
-                  <a href="https://wa.me/5491100000000" target="_blank" rel="noopener noreferrer">
-                    Consultar por WhatsApp
+                  <a href={ctaBtnLink} target="_blank" rel="noopener noreferrer">
+                    {ctaBtnText}
                   </a>
                 </Button>
               </div>
@@ -176,7 +258,7 @@ export default function HomePage() {
         <CartDrawer />
 
         <a
-          href="https://wa.me/5491100000000"
+          href={ctaBtnLink}
           target="_blank"
           rel="noopener noreferrer"
           className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-500 shadow-lg hover:bg-green-600 transition-colors"
