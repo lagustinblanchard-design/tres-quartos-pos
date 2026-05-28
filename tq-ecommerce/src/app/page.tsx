@@ -6,6 +6,7 @@ import { StoreFooter } from "@/components/layout/store-footer";
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawer } from "@/components/store/cart-drawer";
 import { prisma } from "@/lib/prisma";
+import { HeroReveal, FadeUp, StaggerList, StaggerItem } from "@/components/store/animations";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,11 @@ export default async function HomePage() {
   const cfg = Object.fromEntries(configs.map((c) => [c.key, JSON.parse(c.value)]));
 
   const hero = cfg.homepage_hero ?? {};
-  const banners: Array<{ id: string; isActive: boolean; image_url: string; video_url: string; title: string; subtitle: string; btn_text: string; btn_link: string; btn_bg: string; btn_color: string }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
+  const banners: Array<{
+    id: string; isActive: boolean; image_url: string; video_url: string;
+    title: string; subtitle: string; btn_text: string; btn_link: string;
+    btn_bg: string; btn_color: string;
+  }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
   const cta = cfg.homepage_cta ?? {};
 
   const heroTitle = hero.title ?? "Donde el rugby sigue vivo.";
@@ -72,15 +77,12 @@ export default async function HomePage() {
         <StoreHeader />
         <main className="flex-1">
           <div>
-            {/* Hero */}
+            {/* ── Hero ── */}
             <section
               className="relative bg-[#3A3A3A] text-white overflow-hidden"
               style={heroImageUrl ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}}
             >
-              {/* overlay when image is set */}
               {heroImageUrl && <div className="absolute inset-0 bg-[#3A3A3A]/70" />}
-
-              {/* pattern when no image */}
               {!heroImageUrl && (
                 <div className="absolute inset-0 opacity-5">
                   <div className="absolute inset-0" style={{
@@ -92,72 +94,103 @@ export default async function HomePage() {
 
               <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
                 <div className="max-w-2xl">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#F5C200]/20 border border-[#F5C200]/40 px-4 py-1.5 mb-6">
-                    <span className="text-[#F5C200] text-xs font-barlow font-semibold uppercase tracking-widest">
-                      {heroBadge}
-                    </span>
-                  </div>
-                  <h1 className="font-barlow font-bold text-5xl md:text-7xl mb-4 leading-none uppercase tracking-tight">
-                    {heroTitle.includes("sigue vivo") ? (
-                      <>
-                        Donde el rugby
-                        <br />
-                        <span className="text-[#F5C200]">sigue vivo.</span>
-                      </>
-                    ) : (
-                      heroTitle
-                    )}
-                  </h1>
-                  <p className="text-gray-300 text-lg mb-8 leading-relaxed">{heroSubtitle}</p>
-                  <div className="flex flex-wrap gap-4">
-                    <Button size="lg" className="font-barlow font-bold uppercase tracking-wide text-base" style={{ background: heroBtn1Bg, color: heroBtn1Color }} asChild>
-                      <Link href={heroBtn1Link}>
-                        {heroBtn1Text} <ArrowRight className="ml-2 h-5 w-5" />
-                      </Link>
-                    </Button>
-                    {heroBtn2Text && (
-                      <Button size="lg" variant="outline" className="font-semibold" style={{ background: heroBtn2Bg, color: heroBtn2Color, borderColor: heroBtn2Color }} asChild>
-                        <Link href={heroBtn2Link}>{heroBtn2Text}</Link>
-                      </Button>
-                    )}
-                  </div>
+                  {/* Badge */}
+                  <HeroReveal delay={0}>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#F5C200]/20 border border-[#F5C200]/40 px-4 py-1.5 mb-6">
+                      <span className="text-[#F5C200] text-xs font-barlow font-semibold uppercase tracking-widest">
+                        {heroBadge}
+                      </span>
+                    </div>
+                  </HeroReveal>
 
-                  <div className="flex gap-8 mt-12 pt-8 border-t border-white/10">
-                    {[["Rugby", "Especialistas"], ["30 días", "Cambios gratis"], ["MP + Transfer", "Métodos de pago"]].map(([val, label]) => (
-                      <div key={label}>
-                        <p className="font-barlow font-bold text-[#F5C200] text-lg">{val}</p>
-                        <p className="text-xs text-gray-400">{label}</p>
-                      </div>
-                    ))}
-                  </div>
+                  {/* Title */}
+                  <HeroReveal delay={0.12}>
+                    <h1 className="font-barlow font-bold text-5xl md:text-7xl mb-4 leading-none uppercase tracking-tight">
+                      {heroTitle.includes("sigue vivo") ? (
+                        <>
+                          Donde el rugby
+                          <br />
+                          <span className="text-[#F5C200]">sigue vivo.</span>
+                        </>
+                      ) : (
+                        heroTitle
+                      )}
+                    </h1>
+                  </HeroReveal>
+
+                  {/* Subtitle */}
+                  <HeroReveal delay={0.24}>
+                    <p className="text-gray-300 text-lg mb-8 leading-relaxed">{heroSubtitle}</p>
+                  </HeroReveal>
+
+                  {/* Buttons */}
+                  <HeroReveal delay={0.36}>
+                    <div className="flex flex-wrap gap-4">
+                      <Button
+                        size="lg"
+                        className="font-barlow font-bold uppercase tracking-wide text-base"
+                        style={{ background: heroBtn1Bg, color: heroBtn1Color }}
+                        asChild
+                      >
+                        <Link href={heroBtn1Link}>
+                          {heroBtn1Text} <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
+                      {heroBtn2Text && (
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="font-semibold"
+                          style={{ background: heroBtn2Bg, color: heroBtn2Color, borderColor: heroBtn2Color }}
+                          asChild
+                        >
+                          <Link href={heroBtn2Link}>{heroBtn2Text}</Link>
+                        </Button>
+                      )}
+                    </div>
+                  </HeroReveal>
+
+                  {/* Stats */}
+                  <HeroReveal delay={0.5}>
+                    <div className="flex gap-8 mt-12 pt-8 border-t border-white/10">
+                      {[["Rugby", "Especialistas"], ["30 días", "Cambios gratis"], ["MP + Transfer", "Métodos de pago"]].map(([val, label]) => (
+                        <div key={label}>
+                          <p className="font-barlow font-bold text-[#F5C200] text-lg">{val}</p>
+                          <p className="text-xs text-gray-400">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </HeroReveal>
                 </div>
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#F5C200]" />
             </section>
 
-            {/* Benefits bar */}
+            {/* ── Benefits ── */}
             <section className="border-b bg-[#F0F0F0]">
               <div className="container mx-auto px-4 py-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StaggerList className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {benefits.map(({ icon: Icon, title, desc }) => (
-                    <div key={title} className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A3A3A] shrink-0">
-                        <Icon className="h-5 w-5 text-[#F5C200]" />
+                    <StaggerItem key={title}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A3A3A] shrink-0">
+                          <Icon className="h-5 w-5 text-[#F5C200]" />
+                        </div>
+                        <div>
+                          <p className="font-barlow font-bold text-[#3A3A3A] text-sm uppercase tracking-wide">{title}</p>
+                          <p className="text-xs text-[#6B6B6B]">{desc}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-barlow font-bold text-[#3A3A3A] text-sm uppercase tracking-wide">{title}</p>
-                        <p className="text-xs text-[#6B6B6B]">{desc}</p>
-                      </div>
-                    </div>
+                    </StaggerItem>
                   ))}
-                </div>
+                </StaggerList>
               </div>
             </section>
 
-            {/* Categories */}
+            {/* ── Categories ── */}
             <section className="container mx-auto px-4 py-16">
-              <div className="flex items-end justify-between mb-8">
+              <FadeUp className="flex items-end justify-between mb-8">
                 <div>
                   <p className="text-xs font-barlow font-semibold text-[#F5C200] uppercase tracking-widest mb-1">Explorá</p>
                   <h2 className="font-barlow font-bold text-4xl text-[#3A3A3A] uppercase">Categorías</h2>
@@ -165,98 +198,113 @@ export default async function HomePage() {
                 <Button variant="outline" className="border-[#3A3A3A] text-[#3A3A3A] hover:bg-[#3A3A3A] hover:text-white font-barlow font-semibold uppercase tracking-wide" asChild>
                   <Link href="/catalogo">Ver todo</Link>
                 </Button>
-              </div>
+              </FadeUp>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StaggerList className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {categories.map((cat) => (
-                  <Link key={cat.slug} href={`/catalogo?cat=${cat.slug}`} className="group">
-                    <div className="rounded-xl bg-[#3A3A3A] overflow-hidden hover:shadow-lg transition-all hover:-translate-y-0.5 duration-200">
-                      <div className="aspect-[4/3] flex items-center justify-center text-6xl bg-[#3A3A3A] group-hover:bg-[#F5C200]/10 transition-colors">
-                        {cat.emoji}
+                  <StaggerItem key={cat.slug}>
+                    <Link href={`/catalogo?cat=${cat.slug}`} className="group block">
+                      <div className="rounded-xl bg-[#3A3A3A] overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 duration-300">
+                        <div className="aspect-[4/3] flex items-center justify-center text-6xl bg-[#3A3A3A] group-hover:bg-[#F5C200]/10 transition-colors duration-300">
+                          {cat.emoji}
+                        </div>
+                        <div className="p-4 border-t border-white/10">
+                          <h3 className="font-barlow font-bold text-white uppercase tracking-wide group-hover:text-[#F5C200] transition-colors">
+                            {cat.name}
+                          </h3>
+                          <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
+                        </div>
                       </div>
-                      <div className="p-4 border-t border-white/10">
-                        <h3 className="font-barlow font-bold text-white uppercase tracking-wide group-hover:text-[#F5C200] transition-colors">
-                          {cat.name}
-                        </h3>
-                        <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
-                      </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerList>
             </section>
 
-            {/* Dynamic banners */}
+            {/* ── Dynamic banners ── */}
             {banners.length > 0 && (
               <section className="container mx-auto px-4 pb-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StaggerList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {banners.map((banner) => (
-                    <div key={banner.id} className="rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white">
-                      {banner.video_url ? (
-                        <div className="aspect-video">
-                          <iframe
-                            src={youtubeEmbed(banner.video_url)}
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; encrypted-media"
-                            allowFullScreen
-                          />
-                        </div>
-                      ) : banner.image_url ? (
-                        <div className="aspect-video overflow-hidden">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover" />
-                        </div>
-                      ) : null}
-                      {(banner.title || banner.btn_text) && (
-                        <div className="p-5">
-                          {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
-                          {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
-                          {banner.btn_text && banner.btn_link && (
-                            <Link href={banner.btn_link} className="inline-block mt-3 font-bold text-sm px-4 py-2 rounded-lg transition-colors" style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}>
-                              {banner.btn_text}
-                            </Link>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <StaggerItem key={banner.id}>
+                      <div className="rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white hover:shadow-lg transition-shadow duration-300">
+                        {banner.video_url ? (
+                          <div className="aspect-video">
+                            <iframe
+                              src={youtubeEmbed(banner.video_url)}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; encrypted-media"
+                              allowFullScreen
+                            />
+                          </div>
+                        ) : banner.image_url ? (
+                          <div className="aspect-video overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                          </div>
+                        ) : null}
+                        {(banner.title || banner.btn_text) && (
+                          <div className="p-5">
+                            {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
+                            {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
+                            {banner.btn_text && banner.btn_link && (
+                              <Link
+                                href={banner.btn_link}
+                                className="inline-block mt-3 font-bold text-sm px-4 py-2 rounded-lg transition-colors"
+                                style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}
+                              >
+                                {banner.btn_text}
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </StaggerItem>
                   ))}
-                </div>
+                </StaggerList>
               </section>
             )}
 
-            {/* Values */}
+            {/* ── Values ── */}
             <section className="bg-[#F0F0F0] py-16">
               <div className="container mx-auto px-4">
-                <div className="text-center mb-10">
+                <FadeUp className="text-center mb-10">
                   <p className="text-xs font-barlow font-semibold text-[#F5C200] uppercase tracking-widest mb-1">Quiénes somos</p>
                   <h2 className="font-barlow font-bold text-4xl text-[#3A3A3A] uppercase">Nuestros valores</h2>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                </FadeUp>
+                <StaggerList className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {values.map((v) => (
-                    <div key={v.label} className="rounded-xl bg-white border border-gray-200 p-5">
-                      <div className="h-1 w-8 bg-[#F5C200] rounded mb-3" />
-                      <h3 className="font-barlow font-bold text-[#3A3A3A] uppercase tracking-wide mb-1">{v.label}</h3>
-                      <p className="text-sm text-[#6B6B6B]">{v.desc}</p>
-                    </div>
+                    <StaggerItem key={v.label}>
+                      <div className="rounded-xl bg-white border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
+                        <div className="h-1 w-8 bg-[#F5C200] rounded mb-3" />
+                        <h3 className="font-barlow font-bold text-[#3A3A3A] uppercase tracking-wide mb-1">{v.label}</h3>
+                        <p className="text-sm text-[#6B6B6B]">{v.desc}</p>
+                      </div>
+                    </StaggerItem>
                   ))}
-                </div>
+                </StaggerList>
               </div>
             </section>
 
-            {/* CTA */}
+            {/* ── CTA ── */}
             <section className="bg-[#F5C200] py-16">
-              <div className="container mx-auto px-4 text-center">
+              <FadeUp className="container mx-auto px-4 text-center">
                 <p className="font-barlow font-semibold text-[#3A3A3A]/70 uppercase tracking-widest text-sm mb-2">¿Tenés un club o equipo?</p>
                 <h2 className="font-barlow font-bold text-4xl md:text-5xl text-[#3A3A3A] uppercase mb-4 whitespace-pre-line">
                   {ctaTitle}
                 </h2>
                 <p className="text-[#3A3A3A]/70 text-lg mb-8">{ctaSubtitle}</p>
-                <Button size="lg" className="font-barlow font-bold uppercase tracking-wide text-base" style={{ background: ctaBtnBg, color: ctaBtnColor }} asChild>
+                <Button
+                  size="lg"
+                  className="font-barlow font-bold uppercase tracking-wide text-base"
+                  style={{ background: ctaBtnBg, color: ctaBtnColor }}
+                  asChild
+                >
                   <a href={ctaBtnLink} target="_blank" rel="noopener noreferrer">
                     {ctaBtnText}
                   </a>
                 </Button>
-              </div>
+              </FadeUp>
             </section>
           </div>
         </main>
