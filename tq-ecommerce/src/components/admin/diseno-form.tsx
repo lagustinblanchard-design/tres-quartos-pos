@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Image as ImageIcon, Video } from "lucide-react";
+import { useState, useRef } from "react";
+import { Loader2, CheckCircle2, AlertCircle, Plus, Trash2, ChevronDown, ChevronUp, Image as ImageIcon, Video, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -142,6 +142,91 @@ function VideoPreview({ url }: { url: string }) {
   );
 }
 
+function DropZone({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    setUploading(true);
+    setUploadError("");
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (res.ok) onChange(data.url);
+      else setUploadError(data.error ?? "Error al subir");
+    } catch {
+      setUploadError("Error de conexión");
+    }
+    setUploading(false);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer.files[0];
+          if (file?.type.startsWith("image/")) upload(file);
+        }}
+        onClick={() => !uploading && inputRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 overflow-hidden ${
+          dragging ? "border-blue-400 bg-blue-50 scale-[1.01]" : "border-gray-300 hover:border-blue-300 bg-gray-50 hover:bg-blue-50/30"
+        } ${value ? "aspect-video max-w-sm" : "py-8 px-4"}`}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            <p className="text-sm text-gray-500">Subiendo imagen...</p>
+          </div>
+        ) : value ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+              <p className="text-white text-sm font-medium">Reemplazar imagen</p>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Upload className={`h-8 w-8 transition-colors ${dragging ? "text-blue-500" : "text-gray-400"}`} />
+            <p className="text-sm font-medium text-gray-600">Arrastrá una imagen acá</p>
+            <p className="text-xs text-gray-400">o hacé click para seleccionar · JPG, PNG, WebP · máx. 10 MB</p>
+          </div>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) upload(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      {uploadError && (
+        <p className="text-xs text-red-500 flex items-center gap-1"><X className="h-3 w-3" />{uploadError}</p>
+      )}
+      {value && (
+        <div className="flex items-center gap-2">
+          <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://..." className="text-xs font-mono h-7" />
+          <button type="button" onClick={() => onChange("")} className="text-red-400 hover:text-red-600 shrink-0 transition-colors">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DisenoForm({ initial }: {
   initial: { homepage_hero?: HeroConfig; homepage_banners?: Banner[]; homepage_cta?: CtaConfig };
 }) {
@@ -255,9 +340,8 @@ export function DisenoForm({ initial }: {
             </span>
           </div>
         </div>
-        <Field label="Imagen de fondo" hint="Pegá la URL de una imagen (JPG, PNG, WebP). Dejá vacío para usar el fondo con patrón.">
-          <Input value={hero.image_url} onChange={(e) => setHero({ ...hero, image_url: e.target.value })} placeholder="https://..." />
-          <ImagePreview url={hero.image_url} />
+        <Field label="Imagen de fondo" hint="Arrastrá o seleccioná una imagen. Dejá vacío para usar el fondo con patrón.">
+          <DropZone value={hero.image_url} onChange={(url) => setHero({ ...hero, image_url: url })} />
         </Field>
       </Section>
 
@@ -278,9 +362,8 @@ export function DisenoForm({ initial }: {
                 </button>
               </div>
             </div>
-            <Field label="Imagen URL" hint="URL directa a imagen (JPG, PNG, WebP)">
-              <Input value={banner.image_url} onChange={(e) => updateBanner(banner.id, { image_url: e.target.value, video_url: "" })} placeholder="https://..." />
-              <ImagePreview url={banner.image_url} />
+            <Field label="Imagen" hint="Arrastrá o seleccioná una imagen. Si hay video de YouTube, tiene prioridad.">
+              <DropZone value={banner.image_url} onChange={(url) => updateBanner(banner.id, { image_url: url, video_url: url ? "" : banner.video_url })} />
             </Field>
             <Field label="O Video YouTube URL" hint="URL de YouTube (ej: https://youtu.be/xxxxx). Si hay imagen y video, se muestra el video.">
               <Input value={banner.video_url} onChange={(e) => updateBanner(banner.id, { video_url: e.target.value, image_url: "" })} placeholder="https://youtu.be/..." />
