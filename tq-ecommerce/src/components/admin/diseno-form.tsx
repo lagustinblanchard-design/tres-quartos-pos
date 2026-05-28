@@ -369,10 +369,10 @@ export function DisenoForm({ initial }: {
               <Field label="Subtítulo">
                 <Input value={banner.subtitle} onChange={(e) => updateBanner(banner.id, { subtitle: e.target.value })} placeholder="Texto secundario" />
               </Field>
-              <Field label="Botón — Texto">
+              <Field label="Texto del botón">
                 <Input value={banner.btn_text} onChange={(e) => updateBanner(banner.id, { btn_text: e.target.value })} placeholder="Ver más" />
               </Field>
-              <Field label="Botón — Link">
+              <Field label="Link del banner" hint="La tarjeta entera va a ser clickeable y lleva a esta URL">
                 <Input value={banner.btn_link} onChange={(e) => updateBanner(banner.id, { btn_link: e.target.value })} placeholder="/catalogo" />
               </Field>
               <ColorPicker label="Botón — Fondo" value={banner.btn_bg ?? "#F5C200"} onChange={(v) => updateBanner(banner.id, { btn_bg: v })} />

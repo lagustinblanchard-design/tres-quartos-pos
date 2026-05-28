@@ -37,6 +37,40 @@ function youtubeEmbed(url: string): string {
   return url;
 }
 
+type BannerData = {
+  id: string; isActive: boolean; image_url: string; video_url: string;
+  title: string; subtitle: string; btn_text: string; btn_link: string;
+  btn_bg: string; btn_color: string;
+};
+
+function BannerCard({ banner }: { banner: BannerData }) {
+  return (
+    <>
+      {banner.video_url ? (
+        <div className="aspect-video">
+          <iframe src={youtubeEmbed(banner.video_url)} className="w-full h-full" allow="accelerometer; autoplay; encrypted-media" allowFullScreen />
+        </div>
+      ) : banner.image_url ? (
+        <div className="aspect-video overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        </div>
+      ) : null}
+      {(banner.title || banner.btn_text) && (
+        <div className="p-5">
+          {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
+          {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
+          {banner.btn_text && (
+            <span className="inline-block mt-3 font-bold text-sm px-4 py-2 rounded-lg" style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}>
+              {banner.btn_text}
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default async function HomePage() {
   const configs = await prisma.businessConfig.findMany({
     where: { key: { in: ["homepage_hero", "homepage_banners", "homepage_cta"] } },
@@ -44,11 +78,7 @@ export default async function HomePage() {
   const cfg = Object.fromEntries(configs.map((c) => [c.key, JSON.parse(c.value)]));
 
   const hero = cfg.homepage_hero ?? {};
-  const banners: Array<{
-    id: string; isActive: boolean; image_url: string; video_url: string;
-    title: string; subtitle: string; btn_text: string; btn_link: string;
-    btn_bg: string; btn_color: string;
-  }> = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
+  const banners: BannerData[] = (cfg.homepage_banners ?? []).filter((b: { isActive: boolean }) => b.isActive);
   const cta = cfg.homepage_cta ?? {};
 
   const heroTitle = hero.title ?? "Donde el rugby sigue vivo.";
@@ -227,38 +257,15 @@ export default async function HomePage() {
                 <StaggerList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {banners.map((banner) => (
                     <StaggerItem key={banner.id}>
-                      <div className="rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white hover:shadow-lg transition-shadow duration-300">
-                        {banner.video_url ? (
-                          <div className="aspect-video">
-                            <iframe
-                              src={youtubeEmbed(banner.video_url)}
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; encrypted-media"
-                              allowFullScreen
-                            />
-                          </div>
-                        ) : banner.image_url ? (
-                          <div className="aspect-video overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={banner.image_url} alt={banner.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                          </div>
-                        ) : null}
-                        {(banner.title || banner.btn_text) && (
-                          <div className="p-5">
-                            {banner.title && <h3 className="font-barlow font-bold text-lg uppercase">{banner.title}</h3>}
-                            {banner.subtitle && <p className="text-sm text-gray-300 mt-1">{banner.subtitle}</p>}
-                            {banner.btn_text && banner.btn_link && (
-                              <Link
-                                href={banner.btn_link}
-                                className="inline-block mt-3 font-bold text-sm px-4 py-2 rounded-lg transition-colors"
-                                style={{ background: banner.btn_bg || "#F5C200", color: banner.btn_color || "#3A3A3A" }}
-                              >
-                                {banner.btn_text}
-                              </Link>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      {banner.btn_link ? (
+                        <Link href={banner.btn_link} className="group block rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                          <BannerCard banner={banner} />
+                        </Link>
+                      ) : (
+                        <div className="rounded-xl overflow-hidden border shadow-sm bg-[#3A3A3A] text-white">
+                          <BannerCard banner={banner} />
+                        </div>
+                      )}
                     </StaggerItem>
                   ))}
                 </StaggerList>
