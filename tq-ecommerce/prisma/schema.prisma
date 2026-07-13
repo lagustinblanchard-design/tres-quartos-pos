@@ -171,8 +171,9 @@ model Product {
   id            String           @id @default(cuid())
   name          String
   slug          String           @unique
-  description   String?          @db.Text
   sku           String           @unique
+  supplierCode  String?          @unique
+  description   String?          @db.Text
   categoryId    String
   brandId       String?
   gender        String?
@@ -261,7 +262,7 @@ model PurchaseOrder {
   id         String              @id @default(cuid())
   supplierId String
   status     String              @default("PENDIENTE")
-  total      Decimal             @db.Decimal(10, 2)
+  total      Decimal?            @db.Decimal(10, 2)
   notes      String?
   supplier   Supplier            @relation(fields: [supplierId], references: [id])
   items      PurchaseOrderItem[]
@@ -276,7 +277,11 @@ model PurchaseOrderItem {
   purchaseOrderId String
   variantSku      String
   quantity        Int
-  unitCost        Decimal       @db.Decimal(10, 2)
+  // El "Cuadro de Pedido" del proveedor no trae un costo por talle
+  // confiable (precios por rango de talle sin regla fija de asignación —
+  // ver scripts/supplier-order-lib.ts). El costo se completa a mano al
+  // armar o recibir el pedido; puede quedar sin definir hasta entonces.
+  unitCost        Decimal?      @db.Decimal(10, 2)
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@map("purchase_order_items")

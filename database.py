@@ -71,6 +71,9 @@ class DbConnection:
     def commit(self):
         self._conn.commit()
 
+    def rollback(self):
+        self._conn.rollback()
+
     def close(self):
         self._conn.close()
 
@@ -118,7 +121,8 @@ _SQLITE_SCHEMA = """
         talla TEXT DEFAULT '',
         color TEXT DEFAULT '',
         stock INTEGER DEFAULT 0,
-        stock_minimo INTEGER DEFAULT 0
+        stock_minimo INTEGER DEFAULT 0,
+        sku_canonico TEXT
     );
 
     CREATE TABLE IF NOT EXISTS proveedores (
@@ -191,6 +195,18 @@ _SQLITE_SCHEMA = """
         precio_costo REAL NOT NULL,
         subtotal REAL NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS mutaciones_pendientes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        cantidad INTEGER NOT NULL,
+        referencia TEXT,
+        creado_en TEXT NOT NULL,
+        procesado INTEGER DEFAULT 0,
+        procesado_en TEXT,
+        error TEXT
+    );
 """
 
 _PG_SCHEMA = [
@@ -221,7 +237,8 @@ _PG_SCHEMA = [
         talla TEXT DEFAULT '',
         color TEXT DEFAULT '',
         stock INTEGER DEFAULT 0,
-        stock_minimo INTEGER DEFAULT 0
+        stock_minimo INTEGER DEFAULT 0,
+        sku_canonico TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS proveedores (
         id SERIAL PRIMARY KEY,
@@ -287,7 +304,30 @@ _PG_SCHEMA = [
         precio_costo REAL NOT NULL,
         subtotal REAL NOT NULL
     )""",
+    """CREATE TABLE IF NOT EXISTS mutaciones_pendientes (
+        id SERIAL PRIMARY KEY,
+        tipo TEXT NOT NULL,
+        sku TEXT NOT NULL,
+        cantidad INTEGER NOT NULL,
+        referencia TEXT,
+        creado_en TEXT NOT NULL,
+        procesado INTEGER DEFAULT 0,
+        procesado_en TEXT,
+        error TEXT
+    )""",
 ]
+
+# Migraciones idempotentes sobre tablas preexistentes (Supabase en producción
+# ya tenía `variantes` sin esta columna antes de este change).
+_PG_MIGRATIONS = [
+    "ALTER TABLE variantes ADD COLUMN IF NOT EXISTS sku_canonico TEXT",
+]
+
+
+def _ensure_sqlite_column(db, table, column, ddl_type):
+    cols = [row["name"] for row in db.execute(f"PRAGMA table_info({table})").fetchall()]
+    if column not in cols:
+        db._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
 
 
 def init_db():
@@ -296,9 +336,13 @@ def init_db():
         if db._is_pg:
             for stmt in _PG_SCHEMA:
                 db.execute(stmt)
+            for stmt in _PG_MIGRATIONS:
+                db.execute(stmt)
             db.commit()
         else:
             db._conn.executescript(_SQLITE_SCHEMA)
+            _ensure_sqlite_column(db, "variantes", "sku_canonico", "TEXT")
+            db.commit()
 
         cnt = db.execute("SELECT COUNT(*) as cnt FROM categorias").fetchone()["cnt"]
         if int(cnt) == 0:

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { sendOrderConfirmation } from "@/lib/email";
 import { validateCoupon, redeemCoupon, processLoyaltyPurchase } from "@/lib/loyalty";
+import { decrementStockForSale, InsufficientStockError } from "@/lib/inventory";
 
 const checkoutSchema = z.object({
   items: z
@@ -97,55 +98,52 @@ export async function POST(req: NextRequest) {
   const total = subtotal + shippingCost - couponDiscount;
 
   // ── 3. Crear la Order en DB (estado PENDIENTE) ─────────────────────────────
-  const order = await prisma.$transaction(async (tx) => {
-    const newOrder = await tx.order.create({
-      data: {
-        channel: "ONLINE",
-        status: "PENDIENTE",
-        userId: session?.user.id ?? null,
-        guestEmail: session ? null : shipping.email,
-        guestName: session ? null : (guestName ?? shipping.name),
-        subtotal,
-        discount: couponDiscount,
-        shipping: shippingCost,
-        total,
-        paymentMethod: paymentMethod as "MERCADOPAGO" | "TRANSFERENCIA",
-        paymentStatus: "PENDIENTE",
-        shippingName: shipping.name,
-        shippingPhone: shipping.phone,
-        shippingAddr: shipping.address,
-        shippingCity: shipping.city,
-        shippingProv: shipping.province,
-        shippingCp: shipping.postalCode,
-        items: {
-          create: orderItems,
-        },
-      },
-      include: { items: true },
-    });
-
-    // Reservar stock (descontar mientras la orden está pendiente de pago)
-    for (const item of orderItems) {
-      const variant = variants.find((v) => v.id === item.variantId)!;
-      await tx.productVariant.update({
-        where: { id: item.variantId },
-        data: { stock: { decrement: item.quantity } },
-      });
-      await tx.stockMovement.create({
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
         data: {
-          variantId: item.variantId,
-          type: "VENTA",
-          quantity: item.quantity,
-          previousQty: variant.stock,
-          newQty: variant.stock - item.quantity,
-          reason: "Venta online",
-          reference: `Pedido #${newOrder.number}`,
+          channel: "ONLINE",
+          status: "PENDIENTE",
+          userId: session?.user.id ?? null,
+          guestEmail: session ? null : shipping.email,
+          guestName: session ? null : (guestName ?? shipping.name),
+          subtotal,
+          discount: couponDiscount,
+          shipping: shippingCost,
+          total,
+          paymentMethod: paymentMethod as "MERCADOPAGO" | "TRANSFERENCIA",
+          paymentStatus: "PENDIENTE",
+          shippingName: shipping.name,
+          shippingPhone: shipping.phone,
+          shippingAddr: shipping.address,
+          shippingCity: shipping.city,
+          shippingProv: shipping.province,
+          shippingCp: shipping.postalCode,
+          items: {
+            create: orderItems,
+          },
         },
+        include: { items: true },
       });
-    }
 
-    return newOrder;
-  });
+      // Reservar stock (descontar mientras la orden está pendiente de pago).
+      // Atómico y condicional: si dos checkouts concurrentes compiten por la
+      // última unidad, uno gana y el otro recibe InsufficientStockError.
+      await decrementStockForSale(
+        tx,
+        orderItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity })),
+        { reason: "Venta online", reference: `Pedido #${newOrder.number}` }
+      );
+
+      return newOrder;
+    });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json({ error: "Stock insuficiente", details: err.failures }, { status: 409 });
+    }
+    throw err;
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 

@@ -3,3 +3,4 @@ data/_import_tmp.xlsx
 __pycache__/
 *.pyc
 .env
+venv/

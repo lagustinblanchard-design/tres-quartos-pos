@@ -19,6 +19,7 @@ const productSchema = z.object({
   name: z.string().min(2),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   sku: z.string().min(1),
+  supplierCode: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().min(1),
   brandId: z.string().optional(),
@@ -98,6 +99,13 @@ export async function POST(req: NextRequest) {
   const existingSku = await prisma.product.findUnique({ where: { sku: productData.sku } });
   if (existingSku) {
     return NextResponse.json({ error: { sku: ["Este SKU ya existe"] } }, { status: 409 });
+  }
+
+  if (productData.supplierCode) {
+    const existingSupplierCode = await prisma.product.findUnique({ where: { supplierCode: productData.supplierCode } });
+    if (existingSupplierCode) {
+      return NextResponse.json({ error: { supplierCode: ["Este código de proveedor ya está asignado a otro producto"] } }, { status: 409 });
+    }
   }
 
   const product = await prisma.product.create({

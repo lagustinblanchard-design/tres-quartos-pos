@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { decrementStockForSale, InsufficientStockError } from "@/lib/inventory";
 import { z } from "zod";
 
 const itemSchema = z.object({
@@ -45,24 +46,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sesión de caja no válida" }, { status: 400 });
   }
 
-  // Fetch variants to validate stock and prices
+  // Validate that all variants exist and are active (pricing/catalog check;
+  // stock availability is validated atomically inside the transaction)
   const variantIds = items.map((i) => i.variantId);
   const variants = await prisma.productVariant.findMany({
     where: { id: { in: variantIds }, isActive: true },
-    select: { id: true, stock: true, price: true },
+    select: { id: true },
   });
-
-  const variantMap = Object.fromEntries(variants.map((v) => [v.id, v]));
-
-  // Check stock
-  const stockErrors: string[] = [];
-  for (const item of items) {
-    const v = variantMap[item.variantId];
-    if (!v) { stockErrors.push(`Variante ${item.variantId} no encontrada`); continue; }
-    if (v.stock < item.quantity) stockErrors.push(`Stock insuficiente para ${item.variantId}`);
-  }
-  if (stockErrors.length) {
-    return NextResponse.json({ error: stockErrors }, { status: 409 });
+  const foundIds = new Set(variants.map((v) => v.id));
+  const notFound = variantIds.filter((id) => !foundIds.has(id));
+  if (notFound.length) {
+    return NextResponse.json(
+      { error: notFound.map((id) => `Variante ${id} no encontrada`) },
+      { status: 400 }
+    );
   }
 
   // Calculate totals
@@ -70,71 +67,68 @@ export async function POST(req: NextRequest) {
   const discountAmount = subtotal * (discount / 100);
   const total = subtotal - discountAmount;
 
-  // Transaction: create order + decrement stock + update session totals
-  const order = await prisma.$transaction(async (tx) => {
-    const newOrder = await tx.order.create({
-      data: {
-        channel: "POS",
-        status: "ENTREGADO",
-        paymentStatus: "PAGADO",
-        paymentMethod,
-        posSessionId: sessionId,
-        subtotal,
-        discount: discountAmount,
-        shipping: 0,
-        total,
-        items: {
-          create: items.map((i) => ({
-            variantId: i.variantId,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            discount: 0,
-            subtotal: i.unitPrice * i.quantity,
-          })),
-        },
-      },
-      select: { id: true, number: true, total: true, createdAt: true },
-    });
-
-    // Decrement stock + create movements
-    for (const item of items) {
-      const v = variantMap[item.variantId];
-      await tx.productVariant.update({
-        where: { id: item.variantId },
-        data: { stock: { decrement: item.quantity } },
-      });
-      await tx.stockMovement.create({
+  // Transaction: create order + decrement stock (atomic, all-or-nothing) + update session totals
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
         data: {
-          variantId: item.variantId,
-          type: "VENTA",
-          quantity: item.quantity,
-          previousQty: v.stock,
-          newQty: v.stock - item.quantity,
-          reason: "Venta POS",
-          reference: `POS #${newOrder.number}`,
+          channel: "POS",
+          status: "ENTREGADO",
+          paymentStatus: "PAGADO",
+          paymentMethod,
+          posSessionId: sessionId,
+          subtotal,
+          discount: discountAmount,
+          shipping: 0,
+          total,
+          items: {
+            create: items.map((i) => ({
+              variantId: i.variantId,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              discount: 0,
+              subtotal: i.unitPrice * i.quantity,
+            })),
+          },
+        },
+        select: { id: true, number: true, total: true, createdAt: true },
+      });
+
+      await decrementStockForSale(
+        tx,
+        items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+        { reason: "Venta POS", reference: `POS #${newOrder.number}`, userId: session.user.id }
+      );
+
+      // Update session totals
+      const totalField = {
+        EFECTIVO: "totalCash",
+        TARJETA_DEBITO: "totalCard",
+        TARJETA_CREDITO: "totalCard",
+        TRANSFERENCIA: "totalTransfer",
+        MERCADOPAGO_QR: "totalMp",
+      }[paymentMethod] ?? "totalCash";
+
+      await tx.posSession.update({
+        where: { id: sessionId },
+        data: {
+          totalSales: { increment: total },
+          [totalField]: { increment: total },
         },
       });
-    }
 
-    // Update session totals
-    const totalField = {
-      EFECTIVO: "totalCash",
-      TARJETA_DEBITO: "totalCard",
-      TARJETA_CREDITO: "totalCard",
-      TRANSFERENCIA: "totalTransfer",
-      MERCADOPAGO_QR: "totalMp",
-    }[paymentMethod] ?? "totalCash";
-
-    await tx.posSession.update({
-      where: { id: sessionId },
-      data: {
-        totalSales: { increment: total },
-        [totalField]: { increment: total },
-      },
+      return newOrder;
     });
-
-    return newOrder;
-  });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        { error: "Stock insuficiente", details: err.failures },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({
     orderId: order.id,

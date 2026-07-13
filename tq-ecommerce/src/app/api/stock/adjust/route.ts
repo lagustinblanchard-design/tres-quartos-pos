@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { applyStockAdjustment, VariantNotFoundError } from "@/lib/inventory";
 
 const adjustSchema = z.object({
   variantId: z.string().min(1),
@@ -25,42 +26,24 @@ export async function POST(req: NextRequest) {
 
   const { variantId, type, quantity, reason, reference } = parsed.data;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!variant) {
-    return NextResponse.json({ error: "Variante no encontrada" }, { status: 404 });
-  }
-
-  let newStock: number;
-  if (type === "ENTRADA") {
-    newStock = variant.stock + quantity;
-  } else if (type === "SALIDA") {
-    newStock = Math.max(0, variant.stock - quantity);
-  } else {
-    // AJUSTE: quantity es el nuevo valor absoluto
-    newStock = quantity;
-  }
-
-  const [updatedVariant, movement] = await prisma.$transaction([
-    prisma.productVariant.update({
-      where: { id: variantId },
-      data: { stock: newStock },
-    }),
-    prisma.stockMovement.create({
-      data: {
-        variantId,
-        type,
-        quantity: type === "AJUSTE" ? newStock - variant.stock : quantity,
-        previousQty: variant.stock,
-        newQty: newStock,
+  let result;
+  try {
+    result = await prisma.$transaction((tx) =>
+      applyStockAdjustment(tx, variantId, type, quantity, {
         reason,
         reference,
         userId: session.user.id,
-      },
-    }),
-  ]);
+      })
+    );
+  } catch (err) {
+    if (err instanceof VariantNotFoundError) {
+      return NextResponse.json({ error: "Variante no encontrada" }, { status: 404 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({
-    variant: { ...updatedVariant, price: Number(updatedVariant.price) },
-    movement,
+    variant: { ...result.variant, price: Number(result.variant.price) },
+    movement: result.movement,
   });
 }

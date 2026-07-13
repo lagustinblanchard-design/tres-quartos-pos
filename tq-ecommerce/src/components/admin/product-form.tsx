@@ -27,6 +27,7 @@ const schema = z.object({
   name: z.string().min(2, "Nombre requerido"),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   sku: z.string().min(1, "SKU requerido"),
+  supplierCode: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().min(1, "Categoría requerida"),
   brandId: z.string().optional(),
@@ -47,6 +48,7 @@ type ProductData = {
   name?: string;
   slug?: string;
   sku?: string;
+  supplierCode?: string | null;
   description?: string;
   categoryId?: string;
   brandId?: string;
@@ -95,6 +97,7 @@ export function ProductForm({
       name: product?.name ?? "",
       slug: product?.slug ?? "",
       sku: product?.sku ?? "",
+      supplierCode: product?.supplierCode ?? "",
       description: product?.description ?? "",
       categoryId: product?.categoryId ?? "",
       brandId: product?.brandId ?? "",
@@ -164,6 +167,7 @@ export function ProductForm({
       tags: tagsArray,
       brandId: data.brandId || undefined,
       gender: data.gender || undefined,
+      supplierCode: data.supplierCode || undefined,
       variants: data.variants.map((v) => ({
         ...v,
         costPrice: Number.isNaN(v.costPrice) ? undefined : v.costPrice,
@@ -223,6 +227,11 @@ export function ProductForm({
             <label className="text-sm font-medium">SKU del producto *</label>
             <Input {...register("sku")} placeholder="REM-001" />
             {errors.sku && <p className="text-xs text-red-500">{errors.sku.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Código del proveedor</label>
+            <Input {...register("supplierCode")} placeholder="1001" />
+            <p className="text-xs text-gray-400">Para mapear este producto con el Cuadro de Pedido (compras automáticas).</p>
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <label className="text-sm font-medium">Descripción</label>

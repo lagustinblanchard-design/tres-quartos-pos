@@ -19,6 +19,7 @@ const variantSchema = z.object({
 
 const patchSchema = z.object({
   name: z.string().min(2).optional(),
+  supplierCode: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().optional(),
   brandId: z.string().optional(),

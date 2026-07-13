@@ -1,7 +1,9 @@
 from collections import defaultdict
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database import get_db
 from utils.helpers import fecha_ahora
+from utils import inventory_client
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/ventas")
 
@@ -24,11 +26,55 @@ def pos():
     return render_template("ventas/pos.html", categorias=categorias, active="pos")
 
 
+def _api_productos_modo_api(q):
+    """Búsqueda de catálogo contra el stock canónico (INVENTORY_MODE=api).
+    Mapea cada SKU canónico a la variante local vía sku_canonico para que
+    el resto del flujo (carrito, cobro, items_venta) siga usando IDs
+    locales sin cambios."""
+    try:
+        data = inventory_client.buscar_catalogo(q)
+    except requests.RequestException:
+        return jsonify({"error": "No se pudo conectar con el inventario. Reintentá en unos segundos."}), 503
+
+    db = get_db()
+    resultado = []
+    for p in data.get("products", []):
+        variantes_out = []
+        for v in p.get("variantes", []):
+            local = db.execute(
+                "SELECT id FROM variantes WHERE sku_canonico=%s", (v["sku"],)
+            ).fetchone()
+            if not local:
+                continue  # variante creada en el ecommerce, aún no mapeada localmente
+            variantes_out.append({
+                "id": local["id"],
+                "sku": v["sku"],
+                "talla": v["talla"],
+                "color": v.get("color", ""),
+                "stock": v["stock"],
+            })
+        if not variantes_out:
+            continue
+        resultado.append({
+            "id": None,
+            "nombre": p["nombre"],
+            "sku": p["sku"],
+            "precio_venta": p["variantes"][0]["precio"] if p["variantes"] else 0,
+            "categoria": None,
+            "variantes": variantes_out,
+        })
+    return jsonify(resultado)
+
+
 @ventas_bp.route("/api/productos")
 @login_required
 def api_productos():
-    db = get_db()
     q = request.args.get("q", "").strip()
+
+    if inventory_client.modo_inventario() == "api":
+        return _api_productos_modo_api(q)
+
+    db = get_db()
     cat = request.args.get("cat", "")
     sql = """
         SELECT p.id, p.nombre, p.sku, p.precio_venta,
@@ -112,6 +158,7 @@ def cobrar():
         lineas.append((vid, qty, precio, desc_item, sub))
 
     total = subtotal * (1 - descuento_global / 100)
+    modo_api = inventory_client.modo_inventario() == "api"
 
     venta_id = db.execute(
         "INSERT INTO ventas (turno_id, vendedor_id, fecha, metodo_pago, subtotal, descuento, total, notas) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
@@ -123,10 +170,42 @@ def cobrar():
             "INSERT INTO items_venta (venta_id, variante_id, cantidad, precio_unitario, descuento, subtotal) VALUES (%s,%s,%s,%s,%s,%s)",
             (venta_id, vid, qty, precio, desc_item, sub)
         )
-        if vid:
+        if vid and not modo_api:
             db.execute("UPDATE variantes SET stock = stock - %s WHERE id=%s", (qty, vid))
 
-    db.commit()
+    if modo_api:
+        referencia = f"FLASK-POS #{venta_id}"
+        items_api = []
+        for vid, qty, _, _, _ in lineas:
+            if not vid:
+                continue
+            row = db.execute("SELECT sku_canonico FROM variantes WHERE id=%s", (vid,)).fetchone()
+            if row and row["sku_canonico"]:
+                items_api.append({"sku": row["sku_canonico"], "cantidad": qty})
+            # Variantes sin sku_canonico (históricas) no participan del
+            # modo api — ver specs/pos-inventory-integration/spec.md.
+
+        try:
+            if items_api:
+                inventory_client.registrar_venta(items_api, referencia)
+            db.commit()
+        except inventory_client.InsufficientStockError as e:
+            db.rollback()
+            return jsonify({"error": "Stock insuficiente", "detalles": e.payload}), 409
+        except requests.RequestException:
+            # Contingencia D7: no se frena la caja. La venta se completa
+            # localmente y la mutación de stock queda encolada para
+            # aplicarse cuando vuelva la conectividad (replay_mutaciones.py).
+            db.commit()
+            for item in items_api:
+                db.execute(
+                    "INSERT INTO mutaciones_pendientes (tipo, sku, cantidad, referencia, creado_en) VALUES (%s,%s,%s,%s,%s)",
+                    ("venta", item["sku"], item["cantidad"], referencia, fecha_ahora())
+                )
+            db.commit()
+    else:
+        db.commit()
+
     items_ticket = db.execute("""
         SELECT iv.cantidad, iv.precio_unitario, iv.descuento, iv.subtotal,
                COALESCE(p.nombre, '—') as nombre,

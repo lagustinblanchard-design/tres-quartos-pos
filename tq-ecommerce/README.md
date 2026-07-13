@@ -1,5 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Inventario: fuente única de verdad
+
+Esta base (Postgres/Prisma) es la **única fuente de verdad de stock** para TresQuartos — tienda online y POS Flask incluidos. El Excel de Dropbox y TiendaNube son legado: no se editan a mano para reflejar stock actual.
+
+- Toda mutación de stock pasa por `src/lib/inventory.ts` (descuento condicional atómico + ledger `StockMovement` obligatorio). No escribir `productVariant.stock` directamente en ningún endpoint nuevo.
+- El POS Flask consume `/api/integration/*` (autenticado con `INTEGRATION_API_KEY`) cuando corre con `INVENTORY_MODE=api`. Ver `openspec/changes/unify-inventory-source-of-truth/` en la raíz del repo para el diseño completo.
+- Importación inicial desde el Excel: `npm run import:inventory -- ruta/archivo.xlsx` (dry-run, genera `import-report.md`) y luego `-- ruta/archivo.xlsx --apply` una vez revisado el reporte y hecho el conteo físico de las diferencias marcadas.
+- `npm test` corre la suite de Vitest (lógica de inventario, rutas de integración, importador).
+
 ## Getting Started
 
 First, run the development server:

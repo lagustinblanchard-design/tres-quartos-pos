@@ -1,6 +1,8 @@
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database import get_db
 from utils.helpers import fecha_ahora
+from utils import inventory_client
 
 compras_bp = Blueprint("compras", __name__, url_prefix="/compras")
 
@@ -131,7 +133,9 @@ def recibir(cid):
         return redirect(url_for("compras.lista"))
 
     items = db.execute("SELECT * FROM items_compra WHERE compra_id=%s", (cid,)).fetchall()
-    if items:
+    modo_api = inventory_client.modo_inventario() == "api"
+
+    if items and not modo_api:
         case_parts = " ".join("WHEN %s THEN stock + %s" for _ in items)
         ids_placeholder = ",".join(["%s"] * len(items))
         params_stock = []
@@ -142,6 +146,8 @@ def recibir(cid):
             f"UPDATE variantes SET stock = CASE id {case_parts} END WHERE id IN ({ids_placeholder})",
             params_stock
         )
+
+    if items:
         prod_prices = {}
         for item in items:
             var = db.execute("SELECT producto_id FROM variantes WHERE id=%s", (item["variante_id"],)).fetchone()
@@ -151,7 +157,38 @@ def recibir(cid):
             db.execute("UPDATE productos SET precio_costo=%s WHERE id=%s", (precio, prod_id))
 
     db.execute("UPDATE compras SET estado='recibida' WHERE id=%s", (cid,))
-    db.commit()
+
+    if modo_api and items:
+        referencia = f"FLASK-POS-COMPRA #{cid}"
+        items_api = []
+        for item in items:
+            row = db.execute(
+                "SELECT sku_canonico FROM variantes WHERE id=%s", (item["variante_id"],)
+            ).fetchone()
+            if row and row["sku_canonico"]:
+                items_api.append({
+                    "sku": row["sku_canonico"],
+                    "cantidad": item["cantidad"],
+                    "precio_costo": item["precio_costo"],
+                })
+
+        try:
+            if items_api:
+                inventory_client.recibir_mercaderia(items_api, referencia)
+            db.commit()
+        except requests.RequestException:
+            # Contingencia D7: la recepción se confirma localmente igual;
+            # la mutación de stock queda encolada para el replay.
+            db.commit()
+            for item in items_api:
+                db.execute(
+                    "INSERT INTO mutaciones_pendientes (tipo, sku, cantidad, referencia, creado_en) VALUES (%s,%s,%s,%s,%s)",
+                    ("recepcion", item["sku"], item["cantidad"], referencia, fecha_ahora())
+                )
+            db.commit()
+    else:
+        db.commit()
+
     flash("Mercadería recibida. Stock actualizado.", "success")
     return redirect(url_for("compras.lista"))
 
